@@ -45,3 +45,8 @@ func (a *Auth) GenJWT(aud string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(a.Key)
 }
+
+// IsLogin 校验用户己登录
+func (a *Auth) IsLogin(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+}

@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
@@ -96,46 +98,12 @@ func (d *DbEngine) Regsiter(w http.ResponseWriter, r *http.Request, ps httproute
 		return
 	}
 
-	p, err := parsup.ParSup().ConvJSON(body)
+	res, err := d.insertOneUser(body)
 	if err != nil {
 		resultor.RetFail(w, err.Error())
 		return
 	}
 
-	err = utils.Required(p, map[string]string{
-		"pwd":   "密码不能为空",
-		"email": "邮箱不能为空",
-		"name":  "昵称不能为空",
-	})
-
-	if err != nil {
-		resultor.RetFail(w, err.Error())
-		return
-	}
-
-	enc, err := d.Auth.CFBEncrypter(p["pwd"].(string))
-
-	if err != nil {
-		resultor.RetFail(w, err.Error())
-		return
-	}
-
-	p["email"] = strings.ToLower(strings.Replace(p["email"].(string), " ", "", -1))
-	p["pwd"] = string(enc)
-	p["createAt"] = time.Now().Local()
-
-	t := d.GetColl(models.TUser)
-
-	res, err := t.InsertOne(context.Background(), p)
-	if err != nil {
-		errMsg := err.Error()
-		if strings.Contains(errMsg, "dup key") {
-			errMsg = "该邮箱已经被注册"
-		}
-
-		resultor.RetFail(w, errMsg)
-		return
-	}
 	tk, err := d.Auth.GenJWT(res.InsertedID.(primitive.ObjectID).Hex())
 	if err != nil {
 		resultor.RetFail(w, err.Error())
@@ -169,4 +137,82 @@ func (d *DbEngine) Profile(w http.ResponseWriter, r *http.Request, ps httprouter
 	res.Decode(&u)
 
 	resultor.RetOk(w, u)
+}
+
+// CreateUser 新增用户
+func (d *DbEngine) CreateUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	body, err := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+	if err != nil {
+		resultor.RetFail(w, err.Error())
+		return
+	}
+	if len(body) == 0 {
+		resultor.RetFail(w, "not has body")
+		return
+	}
+
+	res, err := d.insertOneUser(body)
+	if err != nil {
+		resultor.RetFail(w, err.Error())
+		return
+	}
+
+	resultor.RetOk(w, res.InsertedID.(primitive.ObjectID).Hex())
+}
+
+// RemoveUser 删除用户
+func (d *DbEngine) RemoveUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+}
+
+// UpdateUser 修改用户
+func (d *DbEngine) UpdateUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+}
+
+// ListUser 新增用户
+func (d *DbEngine) ListUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+}
+
+func (d *DbEngine) insertOneUser(body []byte) (*mongo.InsertOneResult, error) {
+	p, err := parsup.ParSup().ConvJSON(body)
+	if err != nil {
+		return nil, err
+	}
+
+	err = utils.Required(p, map[string]string{
+		"pwd":   "密码不能为空",
+		"email": "邮箱不能为空",
+		"name":  "昵称不能为空",
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	enc, err := d.Auth.CFBEncrypter(p["pwd"].(string))
+
+	if err != nil {
+		return nil, err
+	}
+
+	p["email"] = strings.ToLower(strings.Replace(p["email"].(string), " ", "", -1))
+	p["pwd"] = string(enc)
+	p["createAt"] = time.Now().Local()
+
+	t := d.GetColl(models.TUser)
+
+	res, err := t.InsertOne(context.Background(), p)
+	if err != nil {
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "dup key") {
+			errMsg = "该邮箱已经被注册"
+		}
+
+		return nil, errors.New(errMsg)
+
+	}
+	return res, nil
 }
