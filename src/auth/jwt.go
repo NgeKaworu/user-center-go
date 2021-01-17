@@ -1,10 +1,11 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
-	"github.com/NgeKaworu/time-mgt-go/src/resultor"
+	"github.com/NgeKaworu/user-center/src/resultor"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/julienschmidt/httprouter"
 )
@@ -30,7 +31,7 @@ func (a *Auth) JWT(next httprouter.Handle) httprouter.Handle {
 		// Request Basic Authentication otherwise
 		w.Header().Set("WWW-Authenticate", "Bearer realm=Restricted")
 		w.WriteHeader(http.StatusUnauthorized)
-		resultor.RetFail(w, "身份认证失败，请重新登录")
+		resultor.RetFail(w, errors.New("身份认证失败，请重新登录"))
 	}
 }
 

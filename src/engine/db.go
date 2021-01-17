@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/NgeKaworu/time-mgt-go/src/auth"
-	"github.com/NgeKaworu/time-mgt-go/src/models"
+	"github.com/NgeKaworu/user-center/src/auth"
+	"github.com/NgeKaworu/user-center/src/models"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -70,11 +70,25 @@ func (d *DbEngine) Open(mg, mdb string, initdb bool, a *auth.Auth) error {
 		defer session.Disconnect(context.Background())
 		// 用户表
 		t := session.Database(mdb).Collection(models.TUser)
+
+		// 初始化超管
+		res, err := d.insertOneUser(map[string]interface{}{
+			"email":   "NgeKaworu@163.com",
+			"name":    "furan",
+			"pwd":     "12345678",
+			"isAdmin": true,
+		})
+
+		if err != nil {
+			log.Println(err)
+		} else {
+			log.Println(res.InsertedID)
+		}
+
 		indexView := t.Indexes()
 		_, err = indexView.CreateMany(context.Background(), []mongo.IndexModel{
 			{Keys: bsonx.Doc{bsonx.Elem{Key: "email", Value: bsonx.Int32(1)}}, Options: options.Index().SetUnique(true)},
 			{Keys: bsonx.Doc{bsonx.Elem{Key: "name", Value: bsonx.Int32(1)}}},
-			{Keys: bsonx.Doc{bsonx.Elem{Key: "createAt", Value: bsonx.Int32(-1)}}},
 		})
 		if err != nil {
 			log.Println(err)

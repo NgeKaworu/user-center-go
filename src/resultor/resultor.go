@@ -15,7 +15,7 @@ func RetOk(w http.ResponseWriter, data interface{}) {
 	}
 	b, err := json.Marshal(res)
 	if err != nil {
-		RetFail(w, err.Error())
+		RetFail(w, err)
 		return
 	}
 
@@ -23,7 +23,9 @@ func RetOk(w http.ResponseWriter, data interface{}) {
 }
 
 // RetFail 失败处理器
-func RetFail(w http.ResponseWriter, errMsg string) {
+func RetFail(w http.ResponseWriter, e error) {
+	errMsg := e.Error()
+
 	res := map[string]interface{}{
 		"ok":     false,
 		"errMsg": errMsg,

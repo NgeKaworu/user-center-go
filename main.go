@@ -12,9 +12,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/NgeKaworu/time-mgt-go/src/auth"
-	"github.com/NgeKaworu/time-mgt-go/src/cors"
-	"github.com/NgeKaworu/time-mgt-go/src/engine"
+	"github.com/NgeKaworu/user-center/src/auth"
+	"github.com/NgeKaworu/user-center/src/cors"
+	"github.com/NgeKaworu/user-center/src/engine"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -48,6 +48,9 @@ func main() {
 	router.POST("/login", eng.Login)
 	router.POST("/register", eng.Regsiter)
 	router.GET("/profile", a.JWT(eng.Profile))
+	router.POST("/user/create", eng.CreateUser)
+	router.DELETE("/user/remove/:uid", eng.RemoveUser)
+	router.PUT("/user/update", eng.UpdateUser)
 
 	srv := &http.Server{Handler: cors.CORS(router), ErrorLog: nil}
 	srv.Addr = *addr

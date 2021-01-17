@@ -16,5 +16,6 @@ type User struct {
 	Pwd      *string             `json:"pwd,omitempty" bson:"pwd,omitempty"`           // 密码
 	Email    *string             `json:"email,omitempty" bson:"email,omitempty"`       // 邮箱
 	CreateAt *time.Time          `json:"createAt,omitempty" bson:"createAt,omitempty"` // 创建时间
+	UpdateAt *time.Time          `json:"updateAt,omitempty" bson:"updateAt,omitempty"` // 更新时间
 	IsAdmin  bool                `json:"isAdmin,omitempty" bson:"isAdmin,omitempty"`   // 是否管理员
 }
