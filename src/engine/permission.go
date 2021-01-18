@@ -18,11 +18,11 @@ func (d *DbEngine) Permission(next httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 		uid, err := primitive.ObjectIDFromHex(r.Header.Get("uid"))
-		if err != nil {
+		if err == nil {
 			if access, err := d.GetColl(models.TUser).CountDocuments(context.Background(), bson.M{
 				"_id":     uid,
-				"IsAdmin": true,
-			}); access > 0 && err != nil {
+				"isAdmin": true,
+			}); access > 0 && err == nil {
 				next(w, r, ps)
 				return
 			}

@@ -48,10 +48,10 @@ func main() {
 	router.POST("/login", eng.Login)
 	router.POST("/register", eng.Regsiter)
 	router.GET("/profile", a.JWT(eng.Profile))
-	router.POST("/user/create", eng.CreateUser)
-	router.DELETE("/user/remove/:uid", eng.RemoveUser)
-	router.PUT("/user/update", eng.UpdateUser)
-	router.GET("/user/list", eng.UserList)
+	router.POST("/user/create", a.JWT(eng.Permission(eng.CreateUser)))
+	router.DELETE("/user/remove/:uid", a.JWT(eng.Permission(eng.RemoveUser)))
+	router.PUT("/user/update", a.JWT(eng.Permission(eng.UpdateUser)))
+	router.GET("/user/list", a.JWT(eng.Permission(eng.UserList)))
 
 	srv := &http.Server{Handler: cors.CORS(router), ErrorLog: nil}
 	srv.Addr = *addr
