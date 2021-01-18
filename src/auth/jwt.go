@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
@@ -14,24 +15,18 @@ import (
 func (a *Auth) JWT(next httprouter.Handle) httprouter.Handle {
 	//权限验证
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		auth := r.Header.Get("Authorization")
-		if auth != "" {
-			token, err := jwt.ParseWithClaims(auth, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
-				return a.Key, nil
-			})
-			if err == nil {
-				if tk, ok := token.Claims.(*jwt.StandardClaims); ok && token.Valid {
-					r.Header.Set("uid", tk.Audience)
-					next(w, r, ps)
-					return
-				}
-			}
+		audience, err := a.checkTokenAudience(r.Header.Get("Authorization"))
+		if err != nil {
+			// Request Basic Authentication otherwise
+			w.Header().Set("WWW-Authenticate", "Bearer realm=Restricted")
+			w.WriteHeader(http.StatusUnauthorized)
+			log.Println(err)
+			resultor.RetFail(w, errors.New("身份认证失败，请重新登录"))
+			return
 		}
 
-		// Request Basic Authentication otherwise
-		w.Header().Set("WWW-Authenticate", "Bearer realm=Restricted")
-		w.WriteHeader(http.StatusUnauthorized)
-		resultor.RetFail(w, errors.New("身份认证失败，请重新登录"))
+		r.Header.Set("uid", *audience)
+		next(w, r, ps)
 	}
 }
 
@@ -49,5 +44,33 @@ func (a *Auth) GenJWT(aud string) (string, error) {
 
 // IsLogin 校验用户己登录
 func (a *Auth) IsLogin(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	audience, err := a.checkTokenAudience(r.Header.Get("Authorization"))
+	if err != nil {
+		resultor.RetFail(w, err)
+		return
+	}
 
+	resultor.RetOk(w, audience)
+}
+
+func (a *Auth) checkTokenAudience(auth string) (audience *string, err error) {
+	if auth == "" {
+		err = errors.New("auth is empty")
+		return
+	}
+
+	token, err := jwt.ParseWithClaims(auth, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return a.Key, nil
+	})
+
+	if err != nil {
+		err = errors.New("token is invalid")
+		return
+	}
+
+	if tk, ok := token.Claims.(*jwt.StandardClaims); ok && token.Valid {
+		audience = &tk.Audience
+	}
+
+	return
 }

@@ -52,6 +52,8 @@ func main() {
 	router.DELETE("/user/remove/:uid", a.JWT(eng.Permission(eng.RemoveUser)))
 	router.PUT("/user/update", a.JWT(eng.Permission(eng.UpdateUser)))
 	router.GET("/user/list", a.JWT(eng.Permission(eng.UserList)))
+	// jwt check rpc
+	router.GET("/isLogin", a.IsLogin)
 
 	srv := &http.Server{Handler: cors.CORS(router), ErrorLog: nil}
 	srv.Addr = *addr
