@@ -51,6 +51,7 @@ func main() {
 	router.POST("/user/create", eng.CreateUser)
 	router.DELETE("/user/remove/:uid", eng.RemoveUser)
 	router.PUT("/user/update", eng.UpdateUser)
+	router.GET("/user/list", eng.UserList)
 
 	srv := &http.Server{Handler: cors.CORS(router), ErrorLog: nil}
 	srv.Addr = *addr

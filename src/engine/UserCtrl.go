@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -261,28 +262,60 @@ func (d *DbEngine) UpdateUser(w http.ResponseWriter, r *http.Request, ps httprou
 	resultor.RetOk(w, "操作成功")
 }
 
-// ListUser 查找用户
-// func (d *DbEngine) ListUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-// 	body, err := ioutil.ReadAll(r.Body)
-// 	defer r.Body.Close()
-// 	if err != nil {
-// 		resultor.RetFail(w, err)
-// 		return
-// 	}
+// UserList 查找用户
+func (d *DbEngine) UserList(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
-// 	if len(body) == 0 {
-// 		resultor.RetFail(w, errors.New("not has body"))
-// 	}
+	q := r.URL.Query()
 
-// 	p, err := parsup.ParSup().ConvJSON(body)
-// 	if err != nil {
-// 		resultor.RetFail(w, err)
-// 	}
+	var skip, limit int64 = 0, 10
 
-// 	d.GetColl(models.TUser).Find(context.Background(), bson.M{
+	if value := q.Get("skip"); value != "" {
+		i, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			resultor.RetFail(w, errors.New("skip not number"))
+			return
+		}
+		skip = i
+	}
 
-// 	})
-// }
+	if value := q.Get("limit"); value != "" {
+		i, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			resultor.RetFail(w, errors.New("limit not number"))
+			return
+		}
+		limit = i
+	}
+
+	cur, err := d.GetColl(models.TUser).Find(context.Background(), bson.M{
+		"$or": []bson.M{
+			{"name": bson.M{"$regex": q.Get("keyword")}},
+			{"email": bson.M{"$regex": q.Get("keyword")}},
+		},
+	},
+		options.Find().
+			SetSkip(skip).
+			SetLimit(limit).
+			SetProjection(bson.M{
+				"pwd": 0,
+			}),
+	)
+
+	if err != nil {
+		resultor.RetFail(w, err)
+		return
+	}
+
+	var users []models.User
+	err = cur.All(context.Background(), &users)
+
+	if err != nil {
+		resultor.RetFail(w, err)
+		return
+	}
+
+	resultor.RetOk(w, users)
+}
 
 func (d *DbEngine) insertOneUser(user map[string]interface{}) (*mongo.InsertOneResult, error) {
 	err := utils.Required(user, map[string]string{
