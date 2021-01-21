@@ -224,6 +224,7 @@ func (d *DbEngine) UpdateUser(w http.ResponseWriter, r *http.Request, ps httprou
 
 	if err != nil {
 		resultor.RetFail(w, err)
+		return
 	}
 
 	if pwd, ok := p["pwd"]; ok {
@@ -287,12 +288,16 @@ func (d *DbEngine) UserList(w http.ResponseWriter, r *http.Request, ps httproute
 		limit = i
 	}
 
-	cur, err := d.GetColl(models.TUser).Find(context.Background(), bson.M{
+	t := d.GetColl(models.TUser)
+
+	params := bson.M{
 		"$or": []bson.M{
 			{"name": bson.M{"$regex": q.Get("keyword")}},
 			{"email": bson.M{"$regex": q.Get("keyword")}},
 		},
-	},
+	}
+
+	cur, err := t.Find(context.Background(), params,
 		options.Find().
 			SetSkip(skip).
 			SetLimit(limit).
@@ -314,7 +319,14 @@ func (d *DbEngine) UserList(w http.ResponseWriter, r *http.Request, ps httproute
 		return
 	}
 
-	resultor.RetOk(w, users)
+	total, err := t.CountDocuments(context.Background(), params)
+
+	if err != nil {
+		resultor.RetFail(w, err)
+		return
+	}
+
+	resultor.RetOkWithTotal(w, users, total)
 }
 
 func (d *DbEngine) insertOneUser(user map[string]interface{}) (*mongo.InsertOneResult, error) {

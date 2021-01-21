@@ -22,6 +22,22 @@ func RetOk(w http.ResponseWriter, data interface{}) {
 	fmt.Fprint(w, string(b))
 }
 
+// RetOkWithTotal 成功处理器
+func RetOkWithTotal(w http.ResponseWriter, data interface{}, total int64) {
+	res := map[string]interface{}{
+		"ok":    true,
+		"data":  data,
+		"total": total,
+	}
+	b, err := json.Marshal(res)
+	if err != nil {
+		RetFail(w, err)
+		return
+	}
+
+	fmt.Fprint(w, string(b))
+}
+
 // RetFail 失败处理器
 func RetFail(w http.ResponseWriter, e error) {
 	errMsg := e.Error()
