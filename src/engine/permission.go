@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/NgeKaworu/user-center/src/models"
-	"github.com/NgeKaworu/user-center/src/resultor"
+	"github.com/NgeKaworu/user-center/src/returnee"
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
@@ -30,6 +30,6 @@ func (d *DbEngine) Permission(next httprouter.Handle) httprouter.Handle {
 
 		// Request Basic Authentication otherwise
 		w.WriteHeader(http.StatusUnauthorized)
-		resultor.RetFail(w, errors.New("无权访问"))
+		returnee.RetFail(w, errors.New("无权访问"))
 	}
 }

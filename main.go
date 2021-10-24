@@ -25,7 +25,7 @@ func init() {
 func main() {
 	var (
 		addr   = flag.String("l", ":8011", "绑定Host地址")
-		dbinit = flag.Bool("i", false, "init database flag")
+		dbInit = flag.Bool("i", false, "init database flag")
 		mongo  = flag.String("m", "mongodb://localhost:27017", "mongod addr flag")
 		db     = flag.String("db", "uc", "database name")
 		k      = flag.String("k", "f3fa39nui89Wi707", "iv key")
@@ -37,7 +37,7 @@ func main() {
 
 	a := auth.NewAuth(*k)
 	eng := engine.NewDbEngine()
-	err := eng.Open(*mongo, *db, *dbinit, a)
+	err := eng.Open(*mongo, *db, *dbInit, a)
 
 	if err != nil {
 		log.Println(err.Error())
@@ -48,6 +48,7 @@ func main() {
 	router.POST("/login", eng.Login)
 	router.POST("/register", eng.Regsiter)
 	router.GET("/profile", a.JWT(eng.Profile))
+	// user mgt
 	router.POST("/user/create", a.JWT(eng.Permission(eng.CreateUser)))
 	router.DELETE("/user/remove/:uid", a.JWT(eng.Permission(eng.RemoveUser)))
 	router.PUT("/user/update", a.JWT(eng.Permission(eng.UpdateUser)))
@@ -81,6 +82,7 @@ func main() {
 			eng.Close()
 			fmt.Println("safe exit")
 			cleanupDone <- true
+
 		}
 	}()
 	<-cleanupDone

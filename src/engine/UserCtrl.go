@@ -11,7 +11,7 @@ import (
 
 	"github.com/NgeKaworu/user-center/src/models"
 	"github.com/NgeKaworu/user-center/src/parsup"
-	"github.com/NgeKaworu/user-center/src/resultor"
+	"github.com/NgeKaworu/user-center/src/returnee"
 	"github.com/NgeKaworu/user-center/src/utils"
 	"github.com/julienschmidt/httprouter"
 	"go.mongodb.org/mongo-driver/bson"
@@ -25,17 +25,17 @@ func (d *DbEngine) Login(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	body, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 	if len(body) == 0 {
-		resultor.RetFail(w, errors.New("not has body"))
+		returnee.RetFail(w, errors.New("not has body"))
 		return
 	}
 
 	p, err := parsup.ParSup().ConvJSON(body)
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 
@@ -52,7 +52,7 @@ func (d *DbEngine) Login(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	})
 
 	if res.Err() != nil {
-		resultor.RetFail(w, errors.New("没有此用户"))
+		returnee.RetFail(w, errors.New("没有此用户"))
 		return
 	}
 
@@ -60,29 +60,29 @@ func (d *DbEngine) Login(w http.ResponseWriter, r *http.Request, ps httprouter.P
 
 	err = res.Decode(&u)
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 
 	dec, err := d.Auth.CFBDecrypter(*u.Pwd)
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 
 	if string(dec) != p["pwd"] {
-		resultor.RetFail(w, errors.New("用户名密码不匹配，请注意大小写。"))
+		returnee.RetFail(w, errors.New("用户名密码不匹配，请注意大小写。"))
 		return
 	}
 
 	tk, err := d.Auth.GenJWT(u.ID.Hex())
 
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 
-	resultor.RetOk(w, tk)
+	returnee.RetOk(w, tk)
 	return
 }
 
@@ -91,18 +91,18 @@ func (d *DbEngine) Regsiter(w http.ResponseWriter, r *http.Request, ps httproute
 	body, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 
 	if len(body) == 0 {
-		resultor.RetFail(w, errors.New("not has body"))
+		returnee.RetFail(w, errors.New("not has body"))
 		return
 	}
 
 	p, err := parsup.ParSup().ConvJSON(body)
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 
@@ -111,17 +111,17 @@ func (d *DbEngine) Regsiter(w http.ResponseWriter, r *http.Request, ps httproute
 
 	res, err := d.insertOneUser(p)
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 
 	tk, err := d.Auth.GenJWT(res.InsertedID.(primitive.ObjectID).Hex())
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 
-	resultor.RetOk(w, tk)
+	returnee.RetOk(w, tk)
 
 }
 
@@ -129,7 +129,7 @@ func (d *DbEngine) Regsiter(w http.ResponseWriter, r *http.Request, ps httproute
 func (d *DbEngine) Profile(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	uid, err := primitive.ObjectIDFromHex(r.Header.Get("uid"))
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 	t := d.GetColl(models.TUser)
@@ -139,7 +139,7 @@ func (d *DbEngine) Profile(w http.ResponseWriter, r *http.Request, ps httprouter
 	}))
 
 	if res.Err() != nil {
-		resultor.RetFail(w, res.Err())
+		returnee.RetFail(w, res.Err())
 		return
 	}
 
@@ -147,7 +147,7 @@ func (d *DbEngine) Profile(w http.ResponseWriter, r *http.Request, ps httprouter
 
 	res.Decode(&u)
 
-	resultor.RetOk(w, u)
+	returnee.RetOk(w, u)
 }
 
 // CreateUser 新增用户
@@ -155,28 +155,28 @@ func (d *DbEngine) CreateUser(w http.ResponseWriter, r *http.Request, ps httprou
 	body, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 
 	if len(body) == 0 {
-		resultor.RetFail(w, errors.New("not has body"))
+		returnee.RetFail(w, errors.New("not has body"))
 		return
 	}
 
 	p, err := parsup.ParSup().ConvJSON(body)
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 
 	res, err := d.insertOneUser(p)
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 
-	resultor.RetOk(w, res.InsertedID.(primitive.ObjectID).Hex())
+	returnee.RetOk(w, res.InsertedID.(primitive.ObjectID).Hex())
 }
 
 // RemoveUser 删除用户
@@ -184,7 +184,7 @@ func (d *DbEngine) RemoveUser(w http.ResponseWriter, r *http.Request, ps httprou
 	uid, err := primitive.ObjectIDFromHex(ps.ByName("uid"))
 
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 
@@ -193,11 +193,11 @@ func (d *DbEngine) RemoveUser(w http.ResponseWriter, r *http.Request, ps httprou
 	})
 
 	if res.Err() != nil {
-		resultor.RetFail(w, res.Err())
+		returnee.RetFail(w, res.Err())
 		return
 	}
 
-	resultor.RetOk(w, "删除成功")
+	returnee.RetOk(w, "删除成功")
 }
 
 // UpdateUser 修改用户
@@ -205,17 +205,17 @@ func (d *DbEngine) UpdateUser(w http.ResponseWriter, r *http.Request, ps httprou
 	body, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 
 	if len(body) == 0 {
-		resultor.RetFail(w, errors.New("not has body"))
+		returnee.RetFail(w, errors.New("not has body"))
 	}
 
 	p, err := parsup.ParSup().ConvJSON(body)
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 	}
 
 	err = utils.Required(p, map[string]string{
@@ -223,7 +223,7 @@ func (d *DbEngine) UpdateUser(w http.ResponseWriter, r *http.Request, ps httprou
 	})
 
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 
@@ -231,7 +231,7 @@ func (d *DbEngine) UpdateUser(w http.ResponseWriter, r *http.Request, ps httprou
 		enc, err := d.Auth.CFBEncrypter(pwd.(string))
 
 		if err != nil {
-			resultor.RetFail(w, err)
+			returnee.RetFail(w, err)
 		}
 		p["pwd"] = string(enc)
 	}
@@ -256,11 +256,11 @@ func (d *DbEngine) UpdateUser(w http.ResponseWriter, r *http.Request, ps httprou
 			errMsg = "该邮箱已经被注册"
 		}
 
-		resultor.RetFail(w, errors.New(errMsg))
+		returnee.RetFail(w, errors.New(errMsg))
 		return
 	}
 
-	resultor.RetOk(w, "操作成功")
+	returnee.RetOk(w, "操作成功")
 }
 
 // UserList 查找用户
@@ -273,7 +273,7 @@ func (d *DbEngine) UserList(w http.ResponseWriter, r *http.Request, ps httproute
 	if value := q.Get("skip"); value != "" {
 		i, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			resultor.RetFail(w, errors.New("skip not number"))
+			returnee.RetFail(w, errors.New("skip not number"))
 			return
 		}
 		skip = i
@@ -282,7 +282,7 @@ func (d *DbEngine) UserList(w http.ResponseWriter, r *http.Request, ps httproute
 	if value := q.Get("limit"); value != "" {
 		i, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			resultor.RetFail(w, errors.New("limit not number"))
+			returnee.RetFail(w, errors.New("limit not number"))
 			return
 		}
 		limit = i
@@ -307,7 +307,7 @@ func (d *DbEngine) UserList(w http.ResponseWriter, r *http.Request, ps httproute
 	)
 
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 
@@ -315,18 +315,18 @@ func (d *DbEngine) UserList(w http.ResponseWriter, r *http.Request, ps httproute
 	err = cur.All(context.Background(), &users)
 
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 
 	total, err := t.CountDocuments(context.Background(), params)
 
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 
-	resultor.RetOkWithTotal(w, users, total)
+	returnee.RetOkWithTotal(w, users, total)
 }
 
 func (d *DbEngine) insertOneUser(user map[string]interface{}) (*mongo.InsertOneResult, error) {

@@ -9,6 +9,7 @@ import (
 // TUser 用户表
 const TUser = "t_user"
 
+// undo init
 // User 用户schema
 type User struct {
 	ID       *primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`            // id
@@ -18,4 +19,5 @@ type User struct {
 	CreateAt *time.Time          `json:"createAt,omitempty" bson:"createAt,omitempty"` // 创建时间
 	UpdateAt *time.Time          `json:"updateAt,omitempty" bson:"updateAt,omitempty"` // 更新时间
 	IsAdmin  bool                `json:"isAdmin,omitempty" bson:"isAdmin,omitempty"`   // 是否管理员
+	Roles    []Role              `json:"roles,omitempty" bson:"roles,omitempty"`       // 角色列表
 }

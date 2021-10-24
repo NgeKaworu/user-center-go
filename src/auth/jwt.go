@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/NgeKaworu/user-center/src/resultor"
+	"github.com/NgeKaworu/user-center/src/returnee"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/julienschmidt/httprouter"
 )
@@ -21,7 +21,7 @@ func (a *Auth) JWT(next httprouter.Handle) httprouter.Handle {
 			w.Header().Set("WWW-Authenticate", "Bearer realm=Restricted")
 			w.WriteHeader(http.StatusUnauthorized)
 			log.Println(err)
-			resultor.RetFail(w, errors.New("身份认证失败，请重新登录"))
+			returnee.RetFail(w, errors.New("身份认证失败，请重新登录"))
 			return
 		}
 
@@ -46,11 +46,11 @@ func (a *Auth) GenJWT(aud string) (string, error) {
 func (a *Auth) IsLogin(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	audience, err := a.checkTokenAudience(r.Header.Get("Authorization"))
 	if err != nil {
-		resultor.RetFail(w, err)
+		returnee.RetFail(w, err)
 		return
 	}
 
-	resultor.RetOk(w, audience)
+	returnee.RetOk(w, audience)
 }
 
 func (a *Auth) checkTokenAudience(auth string) (audience *string, err error) {
