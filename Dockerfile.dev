@@ -11,4 +11,4 @@ COPY . .
 RUN go env -w GOPROXY="https://goproxy.cn"
 RUN go get 
 
-CMD ["sh", "-c", "git fetch && git checkout $BRANCH && git pull && go get && bash"]
+CMD ["sh", "-c", "git fetch && git checkout $BRANCH && git pull --ff-only && go get && bash"]
