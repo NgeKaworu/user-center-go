@@ -27,8 +27,9 @@ func NewDbEngine() *DbEngine {
 }
 
 // Open 开启连接池
-func (d *DbEngine) Open(mg, mdb string, initdb bool) error {
+func (d *DbEngine) Open(mg, mdb string, initdb bool, a *auth.Auth) error {
 	d.Mdb = mdb
+	d.Auth = a
 	ops := options.Client().ApplyURI(mg)
 	p := uint64(39000)
 	ops.MaxPoolSize = &p

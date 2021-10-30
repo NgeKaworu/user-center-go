@@ -1,13 +1,16 @@
 version: "3.8"
 
 services:
-  mongo:
-    image: mongo:latest
-    restart: always
+  user-center-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: user-center-api:dev
+    container_name: user-center-api
+    stdin_open: true
+    tty: true
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${DB_USER:-root}
-      MONGO_INITDB_ROOT_PASSWORD: ${DB_PWD:?err}
+      BRANCH: ${BRANCH:-master}
     volumes:
-      - /usr/local/var/mongodb:/data/db
-    ports:
-      - ${PORT:-27017}:27017
+      - ~/.ssh:/root/.ssh
+    network_mode: host
