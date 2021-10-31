@@ -10,7 +10,7 @@
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceFolder}/main.go",
-      "args": ["-i=false", "-m=mongodb://host.docker.internal:27017"]
+      "args": ["-i=false"]
     }
   ]
 }
