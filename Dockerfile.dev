@@ -8,7 +8,7 @@ WORKDIR /home/go/app
 ENV BRANCH = "master"
 
 COPY . .
-RUN go env -w GOPROXY="https://goproxy.cn"
-RUN go get 
+RUN go env -w GOPROXY="https://goproxy.cn" && \
+    go get 
 
-CMD ["sh", "-c", "git fetch && git checkout $BRANCH && git pull --ff-only && go get && bash"]
+CMD ["sh", "-c", "git fetch && git checkout $BRANCH -f && git pull --ff-only && go get && bash"]
