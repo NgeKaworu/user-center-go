@@ -1,6 +1,6 @@
 FROM golang:latest
 
-EXPOSE 8011
+EXPOSE 80
 
 RUN mkdir -p /home/go/app
 
