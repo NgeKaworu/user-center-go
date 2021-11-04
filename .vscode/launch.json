@@ -10,7 +10,15 @@
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceFolder}/main.go",
-      "args": ["-i=false", "-m=mongodb://user-center-mongo:27017"]
+      "args": [
+        "-i=false",
+        "-m=mongodb://mongo:27017",
+        "-l=:80",
+        "-i=true",
+        "-m=",
+        "-db=uc",
+        "k='f3fa39nui89Wi707'"
+      ]
     }
   ]
 }
