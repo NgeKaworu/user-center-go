@@ -11,9 +11,8 @@
       "mode": "auto",
       "program": "${workspaceFolder}/main.go",
       "args": [
-        "-i=${env:BRANCH}",
-        "-m=${env:ADDR}",
-        "-l=${env:DBINIT}",
+        "-i=${env:DBINIT}",
+        "-l=${env:ADDR}",
         "-m=${env:MONGO}",
         "-db=${env:DB}",
         "k=${env:K}",
