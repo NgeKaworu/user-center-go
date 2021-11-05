@@ -46,7 +46,7 @@ func (d *DbEngine) Open(mg, mdb string, initdb bool, a *auth.Auth) error {
 
 	err = db.Connect(ctx)
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	//err = db.Ping(ctx, readpref.PrimaryPreferred())
