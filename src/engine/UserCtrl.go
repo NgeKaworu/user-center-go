@@ -139,6 +139,7 @@ func (d *DbEngine) Profile(w http.ResponseWriter, r *http.Request, ps httprouter
 	}))
 
 	if res.Err() != nil {
+		w.WriteHeader(http.StatusUnauthorized)
 		returnee.RetFail(w, res.Err())
 		return
 	}
