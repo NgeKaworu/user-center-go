@@ -16,7 +16,8 @@
         "-m=${env:MONGO}",
         "-db=${env:DB}",
         "k=${env:K}",
-      ]
+      ],
+      "debugAdapter":"legacy"
     }
   ]
 }
