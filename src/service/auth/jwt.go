@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/NgeKaworu/user-center/src/returnee"
+	"github.com/NgeKaworu/user-center/src/util/resultor"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/julienschmidt/httprouter"
 )
@@ -21,7 +21,7 @@ func (a *Auth) JWT(next httprouter.Handle) httprouter.Handle {
 			w.Header().Set("WWW-Authenticate", "Bearer realm=Restricted")
 			w.WriteHeader(http.StatusUnauthorized)
 			log.Println(err)
-			returnee.RetFail(w, errors.New("身份认证失败，请重新登录"))
+			resultor.RetFail(w, errors.New("身份认证失败，请重新登录"))
 			return
 		}
 
@@ -39,18 +39,18 @@ func (a *Auth) GenJWT(aud string) (string, error) {
 		Audience:  aud,
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(a.Key)
+	return token.SignedString(a.key)
 }
 
 // IsLogin 校验用户己登录
 func (a *Auth) IsLogin(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	audience, err := a.checkTokenAudience(r.Header.Get("Authorization"))
 	if err != nil {
-		returnee.RetFail(w, err)
+		resultor.RetFail(w, err)
 		return
 	}
 
-	returnee.RetOk(w, audience)
+	resultor.RetOk(w, audience)
 }
 
 func (a *Auth) checkTokenAudience(auth string) (audience *string, err error) {
@@ -60,7 +60,7 @@ func (a *Auth) checkTokenAudience(auth string) (audience *string, err error) {
 	}
 
 	token, err := jwt.ParseWithClaims(auth, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return a.Key, nil
+		return a.key, nil
 	})
 
 	if err != nil {

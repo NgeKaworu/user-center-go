@@ -15,7 +15,7 @@ func (a *Auth) CFBEncrypter(s string) ([]byte, error) {
 	// package like bcrypt or scrypt.
 	plaintext := []byte(s)
 
-	block, err := aes.NewCipher(a.Key)
+	block, err := aes.NewCipher(a.key)
 	if err != nil {
 		panic(err)
 	}
@@ -46,7 +46,7 @@ func (a *Auth) CFBDecrypter(s string) ([]byte, error) {
 	// package like bcrypt or scrypt.
 	ciphertext := []byte(s)
 
-	block, err := aes.NewCipher(a.Key)
+	block, err := aes.NewCipher(a.key)
 	if err != nil {
 		panic(err)
 	}

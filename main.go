@@ -12,9 +12,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/NgeKaworu/user-center/src/auth"
-	"github.com/NgeKaworu/user-center/src/cors"
-	"github.com/NgeKaworu/user-center/src/engine"
+	"github.com/NgeKaworu/user-center/src/controller/user"
+	mongoClient "github.com/NgeKaworu/user-center/src/db/mongo"
+	"github.com/NgeKaworu/user-center/src/middleware/cors"
+	"github.com/NgeKaworu/user-center/src/service/auth"
+
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -26,7 +28,7 @@ func main() {
 	var (
 		addr   = flag.String("l", ":80", "绑定Host地址")
 		dbInit = flag.Bool("i", false, "init database flag")
-		mongo  = flag.String("m", "mongodb://localhost:27017", "mongod addr flag")
+		m      = flag.String("m", "mongodb://localhost:27017", "mongod addr flag")
 		db     = flag.String("db", "uc", "database name")
 		k      = flag.String("k", "f3fa39nui89Wi707", "iv key")
 	)
@@ -35,26 +37,28 @@ func main() {
 	log.SetOutput(os.Stdout)
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 
-	a := auth.NewAuth(*k)
-	eng := engine.NewDbEngine()
-	err := eng.Open(*mongo, *db, *dbInit, a)
+	mongoClient := mongoClient.New()
+	err := mongoClient.Open(*m, *db, *dbInit)
 
 	if err != nil {
 		log.Println(err.Error())
 	}
 
+	auth := auth.New(*k)
+	user := user.New(mongoClient, auth)
+
 	router := httprouter.New()
 	// user ctrl
-	router.POST("/login", eng.Login)
-	router.POST("/register", eng.Regsiter)
-	router.GET("/profile", a.JWT(eng.Profile))
+	router.POST("/login", user.Login)
+	router.POST("/register", user.Regsiter)
+	router.GET("/profile", auth.JWT(user.Profile))
 	// user mgt
-	router.POST("/user/create", a.JWT(eng.Permission(eng.CreateUser)))
-	router.DELETE("/user/remove/:uid", a.JWT(eng.Permission(eng.RemoveUser)))
-	router.PUT("/user/update", a.JWT(eng.Permission(eng.UpdateUser)))
-	router.GET("/user/list", a.JWT(eng.Permission(eng.UserList)))
+	router.POST("/user/create", auth.JWT(user.CreateUser))
+	router.DELETE("/user/remove/:uid", auth.JWT(user.RemoveUser))
+	router.PUT("/user/update", auth.JWT(user.UpdateUser))
+	router.GET("/user/list", auth.JWT(user.UserList))
 	// jwt check rpc
-	router.GET("/isLogin", a.IsLogin)
+	router.GET("/isLogin", auth.IsLogin)
 
 	srv := &http.Server{Handler: cors.CORS(router), ErrorLog: nil}
 	srv.Addr = *addr
@@ -79,7 +83,7 @@ func main() {
 				cleanup <- true
 			}()
 			<-cleanup
-			eng.Close()
+			mongoClient.Close()
 			fmt.Println("safe exit")
 			cleanupDone <- true
 

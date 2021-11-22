@@ -1,12 +1,11 @@
-package engine
+package mongoClient
 
 import (
 	"context"
 	"log"
 	"time"
 
-	"github.com/NgeKaworu/user-center/src/auth"
-	"github.com/NgeKaworu/user-center/src/models"
+	"github.com/NgeKaworu/user-center/src/model"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -14,22 +13,20 @@ import (
 	"go.mongodb.org/mongo-driver/x/bsonx"
 )
 
-// DbEngine 关系型数据库引擎
-type DbEngine struct {
-	MgEngine *mongo.Client //关系型数据库引擎
+// MongoClient mongo client
+type MongoClient struct {
+	MgEngine *mongo.Client //mongo client
 	Mdb      string
-	Auth     *auth.Auth // 加解密客户端
 }
 
-// NewDbEngine 实例工厂
-func NewDbEngine() *DbEngine {
-	return &DbEngine{}
+// New 实例工厂
+func New() *MongoClient {
+	return &MongoClient{}
 }
 
 // Open 开启连接池
-func (d *DbEngine) Open(mg, mdb string, initdb bool, a *auth.Auth) error {
+func (d *MongoClient) Open(mg, mdb string, initdb bool) error {
 	d.Mdb = mdb
-	d.Auth = a
 	ops := options.Client().ApplyURI(mg)
 	p := uint64(39000)
 	ops.MaxPoolSize = &p
@@ -69,21 +66,7 @@ func (d *DbEngine) Open(mg, mdb string, initdb bool, a *auth.Auth) error {
 		}
 		defer session.Disconnect(context.Background())
 		// 用户表
-		t := session.Database(mdb).Collection(models.TUser)
-
-		// 初始化超管
-		res, err := d.insertOneUser(map[string]interface{}{
-			"email":   "NgeKaworu@163.com",
-			"name":    "furan",
-			"pwd":     "12345678",
-			"isAdmin": true,
-		})
-
-		if err != nil {
-			log.Println(err)
-		} else {
-			log.Println(res.InsertedID)
-		}
+		t := session.Database(mdb).Collection(model.TUser)
 
 		indexView := t.Indexes()
 		_, err = indexView.CreateMany(context.Background(), []mongo.IndexModel{
@@ -99,12 +82,12 @@ func (d *DbEngine) Open(mg, mdb string, initdb bool, a *auth.Auth) error {
 }
 
 // GetColl 获取表名
-func (d *DbEngine) GetColl(coll string) *mongo.Collection {
+func (d *MongoClient) GetColl(coll string) *mongo.Collection {
 	col, _ := d.MgEngine.Database(d.Mdb).Collection(coll).Clone()
 	return col
 }
 
 // Close 关闭连接池
-func (d *DbEngine) Close() {
+func (d *MongoClient) Close() {
 	d.MgEngine.Disconnect(context.Background())
 }
