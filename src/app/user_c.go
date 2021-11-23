@@ -121,7 +121,7 @@ func (app *App) Regsiter(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		return
 	}
 
-	tk, err := d.Auth.GenJWT(res.InsertedID.(primitive.ObjectID).Hex())
+	tk, err := app.auth.GenJWT(res.InsertedID.(primitive.ObjectID).Hex())
 	if err != nil {
 		responser.RetFail(w, err)
 		return
