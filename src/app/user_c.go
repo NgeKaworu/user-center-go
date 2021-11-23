@@ -1,7 +1,8 @@
-package user
+package app
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"net/http"
@@ -9,12 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NgeKaworu/time-mgt-go/src/utils"
-	mongoClient "github.com/NgeKaworu/user-center/src/db/mongo"
 	"github.com/NgeKaworu/user-center/src/model"
 	"github.com/NgeKaworu/user-center/src/parsup"
-	"github.com/NgeKaworu/user-center/src/service/auth"
-	"github.com/NgeKaworu/user-center/src/util/resultor"
+	"github.com/NgeKaworu/user-center/src/util/responser"
+	"github.com/NgeKaworu/user-center/src/utils"
 	"github.com/julienschmidt/httprouter"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -22,131 +21,121 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type User struct {
-	mongoClient *mongoClient.MongoClient
-	auth        *auth.Auth
-}
-
-func New(
-	mongoClient *mongoClient.MongoClient,
-	auth *auth.Auth,
-) *User {
-	return &User{
-		mongoClient,
-		auth,
-	}
-}
-
 // Login 登录
-func (c *User) Login(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (app *App) Login(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	body, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		resultor.RetFail(w, err)
+		responser.RetFail(w, err)
 		return
 	}
 	if len(body) == 0 {
-		resultor.RetFail(w, errors.New("not has body"))
+		responser.RetFail(w, errors.New("not has body"))
 		return
 	}
 
-	p, err := parsup.ParSup().ConvJSON(body)
-	if err != nil {
-		resultor.RetFail(w, err)
+	type user struct {
+		ID    *primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty" `                         // id
+		Pwd   *string             `json:"pwd,omitempty" bson:"pwd,omitempty" validate:"required"`     // 账号
+		Email *string             `json:"email,omitempty" bson:"email,omitempty" validate:"required"` // 密码
+	}
+
+	inputUser := new(user)
+
+	if err := json.Unmarshal(body, &inputUser); err != nil {
+		responser.RetFail(w, err)
 		return
 	}
 
-	err = utils.Required(p, map[string]string{
-		"pwd":   "密码不能为空",
-		"email": "邮箱不能为空",
-	})
+	if err := app.validate.Struct(inputUser); err != nil {
+		responser.RetFailWithTrans(w, err, app.trans)
+		return
+	}
 
-	t := d.GetColl(model.TUser)
+	t := app.mongoClient.GetColl(model.TUser)
 
-	email := strings.ToLower(strings.Replace(p["email"].(string), " ", "", -1))
+	email := strings.ToLower(strings.Replace(*inputUser.Email, " ", "", -1))
 	res := t.FindOne(context.Background(), bson.M{
 		"email": email,
 	})
 
 	if res.Err() != nil {
-		resultor.RetFail(w, errors.New("没有此用户"))
+		responser.RetFail(w, errors.New("用户名或密码不正确"))
+		return
+	}
+
+	outputUser := new(user)
+
+	err = res.Decode(&outputUser)
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	dec, err := app.auth.CFBDecrypter(*outputUser.Pwd)
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	if string(dec) != *inputUser.Pwd {
+		responser.RetFail(w, errors.New("用户名或密码不正确"))
+		return
+	}
+
+	tk, err := app.auth.GenJWT(outputUser.ID.Hex())
+
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	responser.RetOk(w, tk)
+	return
+}
+
+// Regsiter 注册
+func (app *App) Regsiter(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	body, err := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	if len(body) == 0 {
+		responser.RetFail(w, errors.New("not has body"))
 		return
 	}
 
 	var u model.User
 
-	err = res.Decode(&u)
+	if err := json.Unmarshal(body, u); err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	res, err := app.insertOneUser(&u)
 	if err != nil {
-		resultor.RetFail(w, err)
-		return
-	}
-
-	dec, err := d.Auth.CFBDecrypter(*u.Pwd)
-	if err != nil {
-		resultor.RetFail(w, err)
-		return
-	}
-
-	if string(dec) != p["pwd"] {
-		resultor.RetFail(w, errors.New("用户名密码不匹配，请注意大小写。"))
-		return
-	}
-
-	tk, err := d.Auth.GenJWT(u.ID.Hex())
-
-	if err != nil {
-		resultor.RetFail(w, err)
-		return
-	}
-
-	resultor.RetOk(w, tk)
-	return
-}
-
-// Regsiter 注册
-func (c *User) Regsiter(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	body, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
-	if err != nil {
-		resultor.RetFail(w, err)
-		return
-	}
-
-	if len(body) == 0 {
-		resultor.RetFail(w, errors.New("not has body"))
-		return
-	}
-
-	p, err := parsup.ParSup().ConvJSON(body)
-	if err != nil {
-		resultor.RetFail(w, err)
-		return
-	}
-
-	// 注册用户默认无权限
-	p["isAdmin"] = false
-
-	res, err := d.insertOneUser(p)
-	if err != nil {
-		resultor.RetFail(w, err)
+		responser.RetFail(w, err)
 		return
 	}
 
 	tk, err := d.Auth.GenJWT(res.InsertedID.(primitive.ObjectID).Hex())
 	if err != nil {
-		resultor.RetFail(w, err)
+		responser.RetFail(w, err)
 		return
 	}
 
-	resultor.RetOk(w, tk)
+	responser.RetOk(w, tk)
 
 }
 
 // Profile 获取用户档案
-func (c *User) Profile(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (app *App) Profile(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	uid, err := primitive.ObjectIDFromHex(r.Header.Get("uid"))
 	if err != nil {
-		resultor.RetFail(w, err)
+		responser.RetFail(w, err)
 		return
 	}
 	t := d.GetColl(model.TUser)
@@ -157,7 +146,7 @@ func (c *User) Profile(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 
 	if res.Err() != nil {
 		w.WriteHeader(http.StatusUnauthorized)
-		resultor.RetFail(w, res.Err())
+		responser.RetFail(w, res.Err())
 		return
 	}
 
@@ -165,44 +154,44 @@ func (c *User) Profile(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 
 	res.Decode(&u)
 
-	resultor.RetOk(w, u)
+	responser.RetOk(w, u)
 }
 
 // CreateUser 新增用户
-func (c *User) CreateUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (app *App) CreateUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	body, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		resultor.RetFail(w, err)
+		responser.RetFail(w, err)
 		return
 	}
 
 	if len(body) == 0 {
-		resultor.RetFail(w, errors.New("not has body"))
+		responser.RetFail(w, errors.New("not has body"))
 		return
 	}
 
 	p, err := parsup.ParSup().ConvJSON(body)
 	if err != nil {
-		resultor.RetFail(w, err)
+		responser.RetFail(w, err)
 		return
 	}
 
 	res, err := d.insertOneUser(p)
 	if err != nil {
-		resultor.RetFail(w, err)
+		responser.RetFail(w, err)
 		return
 	}
 
-	resultor.RetOk(w, res.InsertedID.(primitive.ObjectID).Hex())
+	responser.RetOk(w, res.InsertedID.(primitive.ObjectID).Hex())
 }
 
 // RemoveUser 删除用户
-func (c *User) RemoveUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (app *App) RemoveUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	uid, err := primitive.ObjectIDFromHex(ps.ByName("uid"))
 
 	if err != nil {
-		resultor.RetFail(w, err)
+		responser.RetFail(w, err)
 		return
 	}
 
@@ -211,29 +200,29 @@ func (c *User) RemoveUser(w http.ResponseWriter, r *http.Request, ps httprouter.
 	})
 
 	if res.Err() != nil {
-		resultor.RetFail(w, res.Err())
+		responser.RetFail(w, res.Err())
 		return
 	}
 
-	resultor.RetOk(w, "删除成功")
+	responser.RetOk(w, "删除成功")
 }
 
 // UpdateUser 修改用户
-func (c *User) UpdateUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (app *App) UpdateUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	body, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		resultor.RetFail(w, err)
+		responser.RetFail(w, err)
 		return
 	}
 
 	if len(body) == 0 {
-		resultor.RetFail(w, errors.New("not has body"))
+		responser.RetFail(w, errors.New("not has body"))
 	}
 
 	p, err := parsup.ParSup().ConvJSON(body)
 	if err != nil {
-		resultor.RetFail(w, err)
+		responser.RetFail(w, err)
 	}
 
 	err = utils.Required(p, map[string]string{
@@ -241,7 +230,7 @@ func (c *User) UpdateUser(w http.ResponseWriter, r *http.Request, ps httprouter.
 	})
 
 	if err != nil {
-		resultor.RetFail(w, err)
+		responser.RetFail(w, err)
 		return
 	}
 
@@ -249,7 +238,7 @@ func (c *User) UpdateUser(w http.ResponseWriter, r *http.Request, ps httprouter.
 		enc, err := d.Auth.CFBEncrypter(pwd.(string))
 
 		if err != nil {
-			resultor.RetFail(w, err)
+			responser.RetFail(w, err)
 		}
 		p["pwd"] = string(enc)
 	}
@@ -274,15 +263,15 @@ func (c *User) UpdateUser(w http.ResponseWriter, r *http.Request, ps httprouter.
 			errMsg = "该邮箱已经被注册"
 		}
 
-		resultor.RetFail(w, errors.New(errMsg))
+		responser.RetFail(w, errors.New(errMsg))
 		return
 	}
 
-	resultor.RetOk(w, "操作成功")
+	responser.RetOk(w, "操作成功")
 }
 
 // UserList 查找用户
-func (c *User) UserList(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (app *App) UserList(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	q := r.URL.Query()
 
@@ -291,7 +280,7 @@ func (c *User) UserList(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	if value := q.Get("skip"); value != "" {
 		i, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			resultor.RetFail(w, errors.New("skip not number"))
+			responser.RetFail(w, errors.New("skip not number"))
 			return
 		}
 		skip = i
@@ -300,7 +289,7 @@ func (c *User) UserList(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	if value := q.Get("limit"); value != "" {
 		i, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			resultor.RetFail(w, errors.New("limit not number"))
+			responser.RetFail(w, errors.New("limit not number"))
 			return
 		}
 		limit = i
@@ -325,7 +314,7 @@ func (c *User) UserList(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	)
 
 	if err != nil {
-		resultor.RetFail(w, err)
+		responser.RetFail(w, err)
 		return
 	}
 
@@ -333,44 +322,48 @@ func (c *User) UserList(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	err = cur.All(context.Background(), &users)
 
 	if err != nil {
-		resultor.RetFail(w, err)
+		responser.RetFail(w, err)
 		return
 	}
 
 	total, err := t.CountDocuments(context.Background(), params)
 
 	if err != nil {
-		resultor.RetFail(w, err)
+		responser.RetFail(w, err)
 		return
 	}
 
-	resultor.RetOkWithTotal(w, users, total)
+	responser.RetOkWithTotal(w, users, total)
 }
 
-func (c *User) insertOneUser(user map[string]interface{}) (*mongo.InsertOneResult, error) {
-	err := utils.Required(user, map[string]string{
+func (app *App) insertOneUser(u *model.User) (*mongo.InsertOneResult, error) {
+	err := utils.Required(u, map[string]string{
 		"pwd":   "密码不能为空",
 		"email": "邮箱不能为空",
 		"name":  "昵称不能为空",
 	})
 
+	if err := app.validate.Struct(u); err != nil {
+		return nil, err
+	}
+
+	enc, err := app.auth.CFBEncrypter(*u.Pwd)
+
+	email := strings.ToLower(strings.Replace(*u.Email, " ", "", -1))
+	pwd := string(enc)
+	now := time.Now().Local()
 	if err != nil {
 		return nil, err
 	}
 
-	enc, err := d.Auth.CFBEncrypter(user["pwd"].(string))
+	u.Email = &email
+	u.Pwd = &pwd
+	u.CreateAt = &now
 
-	if err != nil {
-		return nil, err
-	}
+	t := app.mongoClient.GetColl(model.TUser)
 
-	user["email"] = strings.ToLower(strings.Replace(user["email"].(string), " ", "", -1))
-	user["pwd"] = string(enc)
-	user["createAt"] = time.Now().Local()
+	res, err := t.InsertOne(context.Background(), u)
 
-	t := d.GetColl(model.TUser)
-
-	res, err := t.InsertOne(context.Background(), user)
 	if err != nil {
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "dup key") {

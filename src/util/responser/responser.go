@@ -1,4 +1,4 @@
-package resultor
+package responser
 
 import (
 	"encoding/json"

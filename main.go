@@ -12,10 +12,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/NgeKaworu/user-center/src/controller/user"
+	"github.com/NgeKaworu/user-center/src/app"
 	mongoClient "github.com/NgeKaworu/user-center/src/db/mongo"
 	"github.com/NgeKaworu/user-center/src/middleware/cors"
 	"github.com/NgeKaworu/user-center/src/service/auth"
+	"github.com/NgeKaworu/user-center/src/util/validator"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -44,19 +45,22 @@ func main() {
 		log.Println(err.Error())
 	}
 
+	validate := validator.NewValidator()
+	trans := validator.NewValidatorTranslator(validate)
+
 	auth := auth.New(*k)
-	user := user.New(mongoClient, auth)
+	app := app.New(mongoClient, validate, trans, auth)
 
 	router := httprouter.New()
 	// user ctrl
-	router.POST("/login", user.Login)
-	router.POST("/register", user.Regsiter)
-	router.GET("/profile", auth.JWT(user.Profile))
+	router.POST("/login", app.Login)
+	router.POST("/register", app.Regsiter)
+	router.GET("/profile", auth.JWT(app.Profile))
 	// user mgt
-	router.POST("/user/create", auth.JWT(user.CreateUser))
-	router.DELETE("/user/remove/:uid", auth.JWT(user.RemoveUser))
-	router.PUT("/user/update", auth.JWT(user.UpdateUser))
-	router.GET("/user/list", auth.JWT(user.UserList))
+	router.POST("/user/create", auth.JWT(app.CreateUser))
+	router.DELETE("/user/remove/:uid", auth.JWT(app.RemoveUser))
+	router.PUT("/user/update", auth.JWT(app.UpdateUser))
+	router.GET("/user/list", auth.JWT(app.UserList))
 	// jwt check rpc
 	router.GET("/isLogin", auth.IsLogin)
 
