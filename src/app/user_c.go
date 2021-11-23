@@ -6,14 +6,12 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/NgeKaworu/user-center/src/model"
-	"github.com/NgeKaworu/user-center/src/parsup"
 	"github.com/NgeKaworu/user-center/src/util/responser"
-	"github.com/NgeKaworu/user-center/src/utils"
+	"github.com/hetiansu5/urlquery"
 	"github.com/julienschmidt/httprouter"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -91,7 +89,6 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 	}
 
 	responser.RetOk(w, tk)
-	return
 }
 
 // Regsiter 注册
@@ -110,7 +107,7 @@ func (app *App) Regsiter(w http.ResponseWriter, r *http.Request, ps httprouter.P
 
 	var u model.User
 
-	if err := json.Unmarshal(body, u); err != nil {
+	if err := json.Unmarshal(body, &u); err != nil {
 		responser.RetFail(w, err)
 		return
 	}
@@ -138,9 +135,7 @@ func (app *App) Profile(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		responser.RetFail(w, err)
 		return
 	}
-	t := d.GetColl(model.TUser)
-
-	res := t.FindOne(context.Background(), bson.M{"_id": uid}, options.FindOne().SetProjection(bson.M{
+	res := app.mongoClient.GetColl(model.TUser).FindOne(context.Background(), bson.M{"_id": uid}, options.FindOne().SetProjection(bson.M{
 		"pwd": 0,
 	}))
 
@@ -171,13 +166,15 @@ func (app *App) CreateUser(w http.ResponseWriter, r *http.Request, ps httprouter
 		return
 	}
 
-	p, err := parsup.ParSup().ConvJSON(body)
+	var u model.User
+	err = json.Unmarshal(body, &u)
 	if err != nil {
 		responser.RetFail(w, err)
 		return
 	}
 
-	res, err := d.insertOneUser(p)
+	res, err := app.insertOneUser(&u)
+
 	if err != nil {
 		responser.RetFail(w, err)
 		return
@@ -195,7 +192,7 @@ func (app *App) RemoveUser(w http.ResponseWriter, r *http.Request, ps httprouter
 		return
 	}
 
-	res := d.GetColl(model.TUser).FindOneAndDelete(context.Background(), bson.M{
+	res := app.mongoClient.GetColl(model.TUser).FindOneAndDelete(context.Background(), bson.M{
 		"_id": uid,
 	})
 
@@ -220,42 +217,39 @@ func (app *App) UpdateUser(w http.ResponseWriter, r *http.Request, ps httprouter
 		responser.RetFail(w, errors.New("not has body"))
 	}
 
-	p, err := parsup.ParSup().ConvJSON(body)
-	if err != nil {
-		responser.RetFail(w, err)
-	}
+	var u model.User
 
-	err = utils.Required(p, map[string]string{
-		"uid": "用户id不能为空",
-	})
+	err = json.Unmarshal(body, &u)
 
 	if err != nil {
 		responser.RetFail(w, err)
 		return
 	}
 
-	if pwd, ok := p["pwd"]; ok {
-		enc, err := d.Auth.CFBEncrypter(pwd.(string))
+	if u.ID == nil {
+		responser.RetFail(w, errors.New("用户id不能为空"))
+		return
+	}
+
+	if u.Pwd != nil {
+		enc, err := app.auth.CFBEncrypter(*u.Pwd)
 
 		if err != nil {
 			responser.RetFail(w, err)
 		}
-		p["pwd"] = string(enc)
+		pwd := string(enc)
+		u.Pwd = &pwd
 	}
 
-	if _, ok := p["email"]; ok {
-		p["email"] = strings.ToLower(strings.Replace(p["email"].(string), " ", "", -1))
+	if u.Email != nil {
+		email := strings.ToLower(strings.Replace(*u.Email, " ", "", -1))
+
+		u.Email = &email
 	}
+	updateAt := time.Now().Local()
+	u.UpdateAt = &updateAt
 
-	p["updateAt"] = time.Now().Local()
-
-	uid := p["uid"]
-
-	delete(p, "uid")
-
-	t := d.GetColl(model.TUser)
-
-	res := t.FindOneAndUpdate(context.Background(), bson.M{"_id": uid}, bson.M{"$set": p})
+	res := app.mongoClient.GetColl(model.TUser).FindOneAndUpdate(context.Background(), bson.M{"_id": *u.ID}, bson.M{"$set": &u})
 
 	if res.Err() != nil {
 		errMsg := res.Err().Error()
@@ -272,46 +266,48 @@ func (app *App) UpdateUser(w http.ResponseWriter, r *http.Request, ps httprouter
 
 // UserList 查找用户
 func (app *App) UserList(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	p := struct {
+		Keyword *string `query:"keyword,omitempty" validate:"omitempty"`
+		Skip    *int64  `query:"skip,omitempty" validate:"omitempty,min=0"`
+		Limit   *int64  `query:"limit,omitempty" validate:"omitempty,min=0"`
+	}{}
 
-	q := r.URL.Query()
-
-	var skip, limit int64 = 0, 10
-
-	if value := q.Get("skip"); value != "" {
-		i, err := strconv.ParseInt(value, 10, 64)
-		if err != nil {
-			responser.RetFail(w, errors.New("skip not number"))
-			return
-		}
-		skip = i
+	err := urlquery.Unmarshal([]byte(r.URL.RawQuery), &p)
+	if err != nil {
+		responser.RetFail(w, err)
+		return
 	}
 
-	if value := q.Get("limit"); value != "" {
-		i, err := strconv.ParseInt(value, 10, 64)
-		if err != nil {
-			responser.RetFail(w, errors.New("limit not number"))
-			return
-		}
-		limit = i
+	err = app.validate.Struct(&p)
+	if err != nil {
+		responser.RetFailWithTrans(w, err, app.trans)
+		return
 	}
-
-	t := d.GetColl(model.TUser)
 
 	params := bson.M{
 		"$or": []bson.M{
-			{"name": bson.M{"$regex": q.Get("keyword")}},
-			{"email": bson.M{"$regex": q.Get("keyword")}},
+			{"name": bson.M{"$regex": p.Keyword}},
+			{"email": bson.M{"$regex": p.Keyword}},
 		},
 	}
 
-	cur, err := t.Find(context.Background(), params,
-		options.Find().
-			SetSkip(skip).
-			SetLimit(limit).
-			SetProjection(bson.M{
-				"pwd": 0,
-			}),
-	)
+	opt := options.Find().
+		SetProjection(bson.M{
+			"pwd": 0,
+		})
+
+	if p.Limit != nil {
+		opt.SetLimit(*p.Limit)
+	} else {
+		opt.SetLimit(10)
+	}
+
+	if p.Skip != nil {
+		opt.SetSkip(*p.Skip)
+	}
+	t := app.mongoClient.GetColl(model.TUser)
+
+	cur, err := t.Find(context.Background(), params, opt)
 
 	if err != nil {
 		responser.RetFail(w, err)
@@ -337,11 +333,6 @@ func (app *App) UserList(w http.ResponseWriter, r *http.Request, ps httprouter.P
 }
 
 func (app *App) insertOneUser(u *model.User) (*mongo.InsertOneResult, error) {
-	err := utils.Required(u, map[string]string{
-		"pwd":   "密码不能为空",
-		"email": "邮箱不能为空",
-		"name":  "昵称不能为空",
-	})
 
 	if err := app.validate.Struct(u); err != nil {
 		return nil, err
