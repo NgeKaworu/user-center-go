@@ -73,6 +73,17 @@ func (d *MongoClient) Open(mg, mdb string, initdb bool) error {
 			{Keys: bsonx.Doc{bsonx.Elem{Key: "email", Value: bsonx.Int32(1)}}, Options: options.Index().SetUnique(true)},
 			{Keys: bsonx.Doc{bsonx.Elem{Key: "name", Value: bsonx.Int32(1)}}},
 		})
+
+		// 用户表
+		t = session.Database(mdb).Collection(model.TPerm)
+
+		indexView = t.Indexes()
+		_, err = indexView.CreateMany(context.Background(), []mongo.IndexModel{
+			{Keys: bsonx.Doc{bsonx.Elem{Key: "name", Value: bsonx.Int32(1)}}},
+			{Keys: bsonx.Doc{bsonx.Elem{Key: "key", Value: bsonx.Int32(1)}}, Options: options.Index().SetUnique(true)},
+			{Keys: bsonx.Doc{bsonx.Elem{Key: "path", Value: bsonx.Int32(1)}}},
+			{Keys: bsonx.Doc{bsonx.Elem{Key: "url", Value: bsonx.Int32(1)}}},
+		})
 		if err != nil {
 			log.Println(err)
 		}

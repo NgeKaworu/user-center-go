@@ -61,6 +61,13 @@ func main() {
 	router.DELETE("/user/remove/:uid", auth.JWT(app.RemoveUser))
 	router.PUT("/user/update", auth.JWT(app.UpdateUser))
 	router.GET("/user/list", auth.JWT(app.UserList))
+
+	// perm mgt
+	router.POST("/perm/create", auth.JWT(app.PermCreate))
+	router.DELETE("/perm/remove/:id", auth.JWT(app.PermRemove))
+	router.PUT("/perm/update", auth.JWT(app.PermUpdate))
+	router.GET("/perm/list", auth.JWT(app.PermList))
+
 	// jwt check rpc
 	router.GET("/isLogin", auth.IsLogin)
 
