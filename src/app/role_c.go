@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/NgeKaworu/user-center/src/model"
@@ -18,8 +17,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// PermCreate 新增权限
-func (app *App) PermCreate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// RoleCreate 新增角色
+func (app *App) RoleCreate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	body, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
@@ -32,7 +31,7 @@ func (app *App) PermCreate(w http.ResponseWriter, r *http.Request, ps httprouter
 		return
 	}
 
-	var u model.Perm
+	var u model.Role
 	err = json.Unmarshal(body, &u)
 	if err != nil {
 		responser.RetFail(w, err)
@@ -44,17 +43,13 @@ func (app *App) PermCreate(w http.ResponseWriter, r *http.Request, ps httprouter
 		return
 	}
 
-	t := app.mongoClient.GetColl(model.TPerm)
+	t := app.mongoClient.GetColl(model.TRole)
 
 	res, err := t.InsertOne(context.Background(), u)
 
 	if err != nil {
-		errMsg := err.Error()
-		if strings.Contains(errMsg, "dup key") {
-			errMsg = "该key已经使用"
-		}
 
-		responser.RetFail(w, errors.New(errMsg))
+		responser.RetFail(w, err)
 		return
 
 	}
@@ -67,8 +62,8 @@ func (app *App) PermCreate(w http.ResponseWriter, r *http.Request, ps httprouter
 	responser.RetOk(w, res.InsertedID.(primitive.ObjectID).Hex())
 }
 
-// PermRemove 删除权限
-func (app *App) PermRemove(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// RoleRemove 删除角色
+func (app *App) RoleRemove(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := primitive.ObjectIDFromHex(ps.ByName("id"))
 
 	if err != nil {
@@ -76,7 +71,7 @@ func (app *App) PermRemove(w http.ResponseWriter, r *http.Request, ps httprouter
 		return
 	}
 
-	res := app.mongoClient.GetColl(model.TPerm).FindOneAndDelete(context.Background(), bson.M{
+	res := app.mongoClient.GetColl(model.TRole).FindOneAndDelete(context.Background(), bson.M{
 		"_id": id,
 	})
 
@@ -88,8 +83,8 @@ func (app *App) PermRemove(w http.ResponseWriter, r *http.Request, ps httprouter
 	responser.RetOk(w, "删除成功")
 }
 
-// PermUpdate 修改权限
-func (app *App) PermUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// RoleUpdate 修改角色
+func (app *App) RoleUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	body, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
@@ -101,7 +96,7 @@ func (app *App) PermUpdate(w http.ResponseWriter, r *http.Request, ps httprouter
 		responser.RetFail(w, errors.New("not has body"))
 	}
 
-	var u model.Perm
+	var u model.Role
 
 	err = json.Unmarshal(body, &u)
 
@@ -123,23 +118,19 @@ func (app *App) PermUpdate(w http.ResponseWriter, r *http.Request, ps httprouter
 	updateAt := time.Now().Local()
 	u.UpdateAt = &updateAt
 
-	res := app.mongoClient.GetColl(model.TPerm).FindOneAndUpdate(context.Background(), bson.M{"_id": *u.ID}, bson.M{"$set": &u})
+	res := app.mongoClient.GetColl(model.TRole).FindOneAndUpdate(context.Background(), bson.M{"_id": *u.ID}, bson.M{"$set": &u})
 
 	if res.Err() != nil {
-		errMsg := res.Err().Error()
-		if strings.Contains(errMsg, "dup key") {
-			errMsg = "该key已经使用"
-		}
 
-		responser.RetFail(w, errors.New(errMsg))
+		responser.RetFail(w, res.Err())
 		return
 	}
 
 	responser.RetOk(w, "操作成功")
 }
 
-// PermList 查找权限
-func (app *App) PermList(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// RoleList 查找角色
+func (app *App) RoleList(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	p := struct {
 		Keyword *string `query:"keyword,omitempty" validate:"omitempty"`
 		Skip    *int64  `query:"skip,omitempty" validate:"omitempty,min=0"`
@@ -161,7 +152,6 @@ func (app *App) PermList(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	params := bson.M{
 		"$or": []bson.M{
 			{"name": bson.M{"$regex": p.Keyword}},
-			{"key": bson.M{"$regex": p.Keyword}},
 		},
 	}
 
@@ -176,7 +166,7 @@ func (app *App) PermList(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	if p.Skip != nil {
 		opt.SetSkip(*p.Skip)
 	}
-	t := app.mongoClient.GetColl(model.TPerm)
+	t := app.mongoClient.GetColl(model.TRole)
 
 	cur, err := t.Find(context.Background(), params, opt)
 
@@ -185,7 +175,7 @@ func (app *App) PermList(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		return
 	}
 
-	var perms []model.Perm
+	var perms []model.Role
 	err = cur.All(context.Background(), &perms)
 
 	if err != nil {
