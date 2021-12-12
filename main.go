@@ -62,18 +62,18 @@ func main() {
 	router.PUT("/user/update", app.UpdateUser)
 	router.GET("/user/list", app.UserList)
 
-	// perm mgt
-	router.POST("/perm/create", app.PermCreate)
-	router.DELETE("/perm/remove/:id", app.PermRemove)
-	router.PUT("/perm/update", app.PermUpdate)
-	router.GET("/perm/list", app.PermList)
-
 	// role mgt
 	router.POST("/role/create", app.RoleCreate)
 	router.DELETE("/role/remove/:id", app.RoleRemove)
 	router.PUT("/role/update", app.RoleUpdate)
 	router.GET("/role/list", app.RoleList)
 
+	// perm mgt
+	router.POST("/perm/create", app.PermCreate)
+	router.DELETE("/perm/remove/:id", app.PermRemove)
+	router.PUT("/perm/update", app.PermUpdate)
+	router.GET("/perm/list", app.PermList)
+	router.GET("/perm/validate", app.PermValidateKey)
 	// jwt check rpc
 	router.GET("/isLogin", auth.IsLogin)
 

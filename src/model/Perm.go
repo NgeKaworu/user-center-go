@@ -20,6 +20,6 @@ type Perm struct {
 	UpdateAt *time.Time          `json:"updateAt,omitempty" bson:"updateAt,omitempty"`             // 更新时间
 
 	// menu
-	Path []*string `json:"path,omitempty" bson:"path,omitempty"` // 族谱
-	Url  *string   `json:"url,omitempty" bson:"url,omitempty"`   // url
+	PID *primitive.ObjectID `json:"pid,omitempty" bson:"pid,omitempty"` // 父id
+	Url *string             `json:"url,omitempty" bson:"url,omitempty"` // url
 }

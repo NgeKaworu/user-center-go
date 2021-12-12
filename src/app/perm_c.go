@@ -124,8 +124,11 @@ func (app *App) PermUpdate(w http.ResponseWriter, r *http.Request, ps httprouter
 
 	updateAt := time.Now().Local()
 	u.UpdateAt = &updateAt
-
-	res := app.mongoClient.GetColl(model.TPerm).FindOneAndUpdate(context.Background(), bson.M{"_id": *u.ID}, bson.M{"$set": &u})
+	updater := bson.M{"$set": &u}
+	if u.PID.IsZero() {
+		updater["$unset"] = bson.M{"pid": ""}
+	}
+	res := app.mongoClient.GetColl(model.TPerm).FindOneAndUpdate(context.Background(), bson.M{"_id": *u.ID}, updater)
 
 	if res.Err() != nil {
 		errMsg := res.Err().Error()
@@ -207,4 +210,52 @@ func (app *App) PermList(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	}
 
 	responser.RetOkWithTotal(w, perms, total)
+}
+
+// PermValidateKey key 校验
+func (app *App) PermValidateKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	p := struct {
+		Key *string `query:"key,omitempty" validate:"required"`
+		ID  *string `query:"id,omitempty" validate:"omitempty"`
+	}{}
+
+	err := urlquery.Unmarshal([]byte(r.URL.RawQuery), &p)
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	err = app.validate.Struct(&p)
+	if err != nil {
+		responser.RetFailWithTrans(w, err, app.trans)
+		return
+	}
+
+	query := bson.M{
+		"key": *p.Key,
+	}
+
+	if p.ID != nil {
+		_ID, err := primitive.ObjectIDFromHex(*p.ID)
+		if err != nil {
+			responser.RetFailWithTrans(w, err, app.trans)
+			return
+		}
+
+		query["_id"] = bson.M{"$ne": &_ID}
+	}
+
+	total, err := app.mongoClient.GetColl(model.TPerm).CountDocuments(context.Background(), query)
+
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	if total != 0 {
+		responser.RetFail(w, errors.New("key 重复"))
+		return
+	}
+
+	responser.RetOk(w, "validate key")
 }
