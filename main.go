@@ -27,8 +27,8 @@ func init() {
 
 func main() {
 	var (
-		addr   = flag.String("l", ":80", "绑定Host地址")
-		dbInit = flag.Bool("i", false, "init database flag")
+		addr   = flag.String("l", ":8088", "绑定Host地址")
+		dbInit = flag.Bool("i", true, "init database flag")
 		m      = flag.String("m", "mongodb://localhost:27017", "mongod addr flag")
 		db     = flag.String("db", "uc", "database name")
 		k      = flag.String("k", "f3fa39nui89Wi707", "iv key")
@@ -55,24 +55,24 @@ func main() {
 	// user ctrl
 	router.POST("/login", app.Login)
 	router.POST("/register", app.Regsiter)
-	router.GET("/profile", auth.JWT(app.Profile))
+	router.GET("/profile", app.Profile)
 	// user mgt
-	router.POST("/user/create", auth.JWT(app.CreateUser))
-	router.DELETE("/user/remove/:uid", auth.JWT(app.RemoveUser))
-	router.PUT("/user/update", auth.JWT(app.UpdateUser))
-	router.GET("/user/list", auth.JWT(app.UserList))
+	router.POST("/user/create", app.CreateUser)
+	router.DELETE("/user/remove/:uid", app.RemoveUser)
+	router.PUT("/user/update", app.UpdateUser)
+	router.GET("/user/list", app.UserList)
 
 	// perm mgt
-	router.POST("/perm/create", auth.JWT(app.PermCreate))
-	router.DELETE("/perm/remove/:id", auth.JWT(app.PermRemove))
-	router.PUT("/perm/update", auth.JWT(app.PermUpdate))
-	router.GET("/perm/list", auth.JWT(app.PermList))
+	router.POST("/perm/create", app.PermCreate)
+	router.DELETE("/perm/remove/:id", app.PermRemove)
+	router.PUT("/perm/update", app.PermUpdate)
+	router.GET("/perm/list", app.PermList)
 
 	// role mgt
-	router.POST("/role/create", auth.JWT(app.RoleCreate))
-	router.DELETE("/role/remove/:id", auth.JWT(app.RoleRemove))
-	router.PUT("/role/update", auth.JWT(app.RoleUpdate))
-	router.GET("/role/list", auth.JWT(app.RoleList))
+	router.POST("/role/create", app.RoleCreate)
+	router.DELETE("/role/remove/:id", app.RoleRemove)
+	router.PUT("/role/update", app.RoleUpdate)
+	router.GET("/role/list", app.RoleList)
 
 	// jwt check rpc
 	router.GET("/isLogin", auth.IsLogin)

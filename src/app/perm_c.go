@@ -43,6 +43,8 @@ func (app *App) PermCreate(w http.ResponseWriter, r *http.Request, ps httprouter
 		responser.RetFail(w, err)
 		return
 	}
+	time := time.Now().Local()
+	u.CreateAt = &time
 
 	t := app.mongoClient.GetColl(model.TPerm)
 
@@ -158,11 +160,15 @@ func (app *App) PermList(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		return
 	}
 
-	params := bson.M{
-		"$or": []bson.M{
-			{"name": bson.M{"$regex": p.Keyword}},
-			{"key": bson.M{"$regex": p.Keyword}},
-		},
+	params := bson.M{}
+
+	if p.Keyword != nil {
+		params = bson.M{
+			"$or": []bson.M{
+				{"name": bson.M{"$regex": p.Keyword}},
+				{"key": bson.M{"$regex": p.Keyword}},
+			},
+		}
 	}
 
 	opt := options.Find()
