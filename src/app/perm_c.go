@@ -125,8 +125,8 @@ func (app *App) PermUpdate(w http.ResponseWriter, r *http.Request, ps httprouter
 	updateAt := time.Now().Local()
 	u.UpdateAt = &updateAt
 	updater := bson.M{"$set": &u}
-	if u.PID.IsZero() {
-		updater["$unset"] = bson.M{"pid": ""}
+	if u.PKey == nil {
+		updater["$unset"] = bson.M{"pKey": ""}
 	}
 	res := app.mongoClient.GetColl(model.TPerm).FindOneAndUpdate(context.Background(), bson.M{"_id": *u.ID}, updater)
 

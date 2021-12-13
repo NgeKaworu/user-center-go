@@ -85,7 +85,7 @@ func (d *MongoClient) Open(mg, mdb string, initdb bool) error {
 		_, err = indexView.CreateMany(context.Background(), []mongo.IndexModel{
 			{Keys: bsonx.Doc{bsonx.Elem{Key: "name", Value: bsonx.Int32(1)}}},
 			{Keys: bsonx.Doc{bsonx.Elem{Key: "key", Value: bsonx.Int32(1)}}, Options: options.Index().SetUnique(true)},
-			{Keys: bsonx.Doc{bsonx.Elem{Key: "pid", Value: bsonx.Int32(1)}}},
+			{Keys: bsonx.Doc{bsonx.Elem{Key: "pKey", Value: bsonx.Int32(1)}}},
 			{Keys: bsonx.Doc{bsonx.Elem{Key: "url", Value: bsonx.Int32(1)}}},
 		})
 
