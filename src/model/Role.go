@@ -16,5 +16,5 @@ type Role struct {
 	Name     *string             `json:"name,omitempty" bson:"name,omitempty" validtor:"required"` // 角色名
 	CreateAt *time.Time          `json:"createAt,omitempty" bson:"createAt,omitempty"`             // 创建时间
 	UpdateAt *time.Time          `json:"updateAt,omitempty" bson:"updateAt,omitempty"`             // 更新时间
-	Perms    []Perm              `json:"perms,omitempty" bson:"perms,omitempty"`                   // 权限列表
+	Perms    []*string           `json:"perms,omitempty" bson:"perms,omitempty"`                   // 权限列表
 }
