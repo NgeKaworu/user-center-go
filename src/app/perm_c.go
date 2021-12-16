@@ -168,7 +168,7 @@ func (app *App) PermList(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		params = bson.M{
 			"$or": []bson.M{
 				{"name": bson.M{"$regex": p.Keyword}},
-				{"id": bson.M{"$regex": p.Keyword}},
+				{"_id": bson.M{"$regex": p.Keyword}},
 			},
 		}
 	}

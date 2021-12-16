@@ -67,6 +67,7 @@ func main() {
 	router.DELETE("/role/remove/:id", app.RoleRemove)
 	router.PUT("/role/update", app.RoleUpdate)
 	router.GET("/role/list", app.RoleList)
+	router.GET("/role/validate", app.RoleValidateKey)
 
 	// perm mgt
 	router.POST("/perm/create", app.PermCreate)

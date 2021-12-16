@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/NgeKaworu/user-center/src/model"
@@ -13,7 +14,6 @@ import (
 	"github.com/hetiansu5/urlquery"
 	"github.com/julienschmidt/httprouter"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
@@ -42,14 +42,20 @@ func (app *App) RoleCreate(w http.ResponseWriter, r *http.Request, ps httprouter
 		responser.RetFail(w, err)
 		return
 	}
+	time := time.Now().Local()
+	u.CreateAt = &time
 
 	t := app.mongoClient.GetColl(model.TRole)
 
 	res, err := t.InsertOne(context.Background(), u)
 
 	if err != nil {
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "dup key") {
+			errMsg = "该key已经使用"
+		}
 
-		responser.RetFail(w, err)
+		responser.RetFail(w, errors.New(errMsg))
 		return
 
 	}
@@ -59,15 +65,15 @@ func (app *App) RoleCreate(w http.ResponseWriter, r *http.Request, ps httprouter
 		return
 	}
 
-	responser.RetOk(w, res.InsertedID.(primitive.ObjectID).Hex())
+	responser.RetOk(w, res.InsertedID)
 }
 
 // RoleRemove 删除角色
 func (app *App) RoleRemove(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	id, err := primitive.ObjectIDFromHex(ps.ByName("id"))
+	id := ps.ByName("id")
 
-	if err != nil {
-		responser.RetFail(w, err)
+	if id == "" {
+		responser.RetFail(w, errors.New("ID不能为空"))
 		return
 	}
 
@@ -117,12 +123,17 @@ func (app *App) RoleUpdate(w http.ResponseWriter, r *http.Request, ps httprouter
 
 	updateAt := time.Now().Local()
 	u.UpdateAt = &updateAt
+	updater := bson.M{"$set": &u}
 
-	res := app.mongoClient.GetColl(model.TRole).FindOneAndUpdate(context.Background(), bson.M{"_id": *u.ID}, bson.M{"$set": &u})
+	res := app.mongoClient.GetColl(model.TRole).FindOneAndUpdate(context.Background(), bson.M{"_id": *u.ID}, updater)
 
 	if res.Err() != nil {
+		errMsg := res.Err().Error()
+		if strings.Contains(errMsg, "dup key") {
+			errMsg = "该key已经使用"
+		}
 
-		responser.RetFail(w, res.Err())
+		responser.RetFail(w, errors.New(errMsg))
 		return
 	}
 
@@ -149,10 +160,15 @@ func (app *App) RoleList(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		return
 	}
 
-	params := bson.M{
-		"$or": []bson.M{
-			{"name": bson.M{"$regex": p.Keyword}},
-		},
+	params := bson.M{}
+
+	if p.Keyword != nil {
+		params = bson.M{
+			"$or": []bson.M{
+				{"name": bson.M{"$regex": p.Keyword}},
+				{"_id": bson.M{"$regex": p.Keyword}},
+			},
+		}
 	}
 
 	opt := options.Find()
@@ -175,8 +191,8 @@ func (app *App) RoleList(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		return
 	}
 
-	var perms []model.Role
-	err = cur.All(context.Background(), &perms)
+	var roles []model.Role
+	err = cur.All(context.Background(), &roles)
 
 	if err != nil {
 		responser.RetFail(w, err)
@@ -190,5 +206,38 @@ func (app *App) RoleList(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		return
 	}
 
-	responser.RetOkWithTotal(w, perms, total)
+	responser.RetOkWithTotal(w, roles, total)
+}
+
+// RoleValidateKey key 校验
+func (app *App) RoleValidateKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	p := struct {
+		ID *string `query:"id,omitempty" validate:"omitempty,required"`
+	}{}
+
+	err := urlquery.Unmarshal([]byte(r.URL.RawQuery), &p)
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	err = app.validate.Struct(&p)
+	if err != nil {
+		responser.RetFailWithTrans(w, err, app.trans)
+		return
+	}
+
+	total, err := app.mongoClient.GetColl(model.TRole).CountDocuments(context.Background(), bson.M{"_id": p.ID})
+
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	if total != 0 {
+		responser.RetFail(w, errors.New("key 重复"))
+		return
+	}
+
+	responser.RetOk(w, "validate key")
 }
