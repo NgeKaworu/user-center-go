@@ -78,21 +78,6 @@ func (d *MongoClient) Open(mg, mdb string, initdb bool) error {
 			log.Println(err)
 		}
 
-		// 权限表
-		t = session.Database(mdb).Collection(model.TPerm)
-
-		indexView = t.Indexes()
-		_, err = indexView.CreateMany(context.Background(), []mongo.IndexModel{
-			{Keys: bsonx.Doc{bsonx.Elem{Key: "name", Value: bsonx.Int32(1)}}},
-			{Keys: bsonx.Doc{bsonx.Elem{Key: "key", Value: bsonx.Int32(1)}}, Options: options.Index().SetUnique(true)},
-			{Keys: bsonx.Doc{bsonx.Elem{Key: "pKey", Value: bsonx.Int32(1)}}},
-			{Keys: bsonx.Doc{bsonx.Elem{Key: "url", Value: bsonx.Int32(1)}}},
-		})
-
-		if err != nil {
-			log.Println(err)
-		}
-
 		// 角色表
 		t = session.Database(mdb).Collection(model.TRole)
 
@@ -105,6 +90,21 @@ func (d *MongoClient) Open(mg, mdb string, initdb bool) error {
 		if err != nil {
 			log.Println(err)
 		}
+
+		// 权限表
+		t = session.Database(mdb).Collection(model.TPerm)
+
+		indexView = t.Indexes()
+		_, err = indexView.CreateMany(context.Background(), []mongo.IndexModel{
+			{Keys: bsonx.Doc{bsonx.Elem{Key: "name", Value: bsonx.Int32(1)}}},
+			{Keys: bsonx.Doc{bsonx.Elem{Key: "pID", Value: bsonx.Int32(1)}}},
+			{Keys: bsonx.Doc{bsonx.Elem{Key: "url", Value: bsonx.Int32(1)}}},
+		})
+
+		if err != nil {
+			log.Println(err)
+		}
+
 	}
 
 	return nil

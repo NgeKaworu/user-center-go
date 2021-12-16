@@ -14,7 +14,6 @@ import (
 	"github.com/hetiansu5/urlquery"
 	"github.com/julienschmidt/httprouter"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
@@ -66,15 +65,15 @@ func (app *App) PermCreate(w http.ResponseWriter, r *http.Request, ps httprouter
 		return
 	}
 
-	responser.RetOk(w, res.InsertedID.(primitive.ObjectID).Hex())
+	responser.RetOk(w, res.InsertedID)
 }
 
 // PermRemove 删除权限
 func (app *App) PermRemove(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	id, err := primitive.ObjectIDFromHex(ps.ByName("id"))
+	id := ps.ByName("id")
 
-	if err != nil {
-		responser.RetFail(w, err)
+	if id == "" {
+		responser.RetFail(w, errors.New("ID不能为空"))
 		return
 	}
 
@@ -125,8 +124,8 @@ func (app *App) PermUpdate(w http.ResponseWriter, r *http.Request, ps httprouter
 	updateAt := time.Now().Local()
 	u.UpdateAt = &updateAt
 	updater := bson.M{"$set": &u}
-	if u.PKey == nil {
-		updater["$unset"] = bson.M{"pKey": ""}
+	if u.PID == nil {
+		updater["$unset"] = bson.M{"pID": ""}
 	}
 	res := app.mongoClient.GetColl(model.TPerm).FindOneAndUpdate(context.Background(), bson.M{"_id": *u.ID}, updater)
 
@@ -169,7 +168,7 @@ func (app *App) PermList(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		params = bson.M{
 			"$or": []bson.M{
 				{"name": bson.M{"$regex": p.Keyword}},
-				{"key": bson.M{"$regex": p.Keyword}},
+				{"id": bson.M{"$regex": p.Keyword}},
 			},
 		}
 	}
@@ -215,8 +214,7 @@ func (app *App) PermList(w http.ResponseWriter, r *http.Request, ps httprouter.P
 // PermValidateKey key 校验
 func (app *App) PermValidateKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	p := struct {
-		Key *string `query:"key,omitempty" validate:"required"`
-		ID  *string `query:"id,omitempty" validate:"omitempty"`
+		ID *string `query:"id,omitempty" validate:"omitempty,required"`
 	}{}
 
 	err := urlquery.Unmarshal([]byte(r.URL.RawQuery), &p)
@@ -231,21 +229,7 @@ func (app *App) PermValidateKey(w http.ResponseWriter, r *http.Request, ps httpr
 		return
 	}
 
-	query := bson.M{
-		"key": *p.Key,
-	}
-
-	if p.ID != nil {
-		_ID, err := primitive.ObjectIDFromHex(*p.ID)
-		if err != nil {
-			responser.RetFailWithTrans(w, err, app.trans)
-			return
-		}
-
-		query["_id"] = bson.M{"$ne": &_ID}
-	}
-
-	total, err := app.mongoClient.GetColl(model.TPerm).CountDocuments(context.Background(), query)
+	total, err := app.mongoClient.GetColl(model.TPerm).CountDocuments(context.Background(), bson.M{"_id": p.ID})
 
 	if err != nil {
 		responser.RetFail(w, err)
