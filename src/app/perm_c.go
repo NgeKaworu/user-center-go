@@ -31,23 +31,24 @@ func (app *App) PermCreate(w http.ResponseWriter, r *http.Request, ps httprouter
 		return
 	}
 
-	var u model.Perm
-	err = json.Unmarshal(body, &u)
+	var p model.Perm
+	err = json.Unmarshal(body, &p)
 	if err != nil {
 		responser.RetFail(w, err)
 		return
 	}
 
-	if err := app.validate.Struct(u); err != nil {
+	if err := app.validate.Struct(&p); err != nil {
 		responser.RetFail(w, err)
 		return
 	}
-	time := time.Now().Local()
-	u.CreateAt = &time
+
+	tt := time.Now().Local()
+	p.CreateAt = &tt
 
 	t := app.mongoClient.GetColl(model.TPerm)
 
-	res, err := t.InsertOne(context.Background(), u)
+	res, err := t.InsertOne(context.Background(), p)
 
 	if err != nil {
 		errMsg := err.Error()
@@ -77,7 +78,23 @@ func (app *App) PermRemove(w http.ResponseWriter, r *http.Request, ps httprouter
 		return
 	}
 
-	res := app.mongoClient.GetColl(model.TPerm).FindOneAndDelete(context.Background(), bson.M{
+	t := app.mongoClient.GetColl(model.TPerm)
+
+	c, err := t.CountDocuments(context.Background(), bson.M{
+		"pID": id,
+	})
+
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	if c != 0 {
+		responser.RetFail(w, errors.New("删除失败：该菜单下存在子菜单。"))
+		return
+	}
+
+	res := t.FindOneAndDelete(context.Background(), bson.M{
 		"_id": id,
 	})
 
@@ -121,8 +138,9 @@ func (app *App) PermUpdate(w http.ResponseWriter, r *http.Request, ps httprouter
 		return
 	}
 
-	updateAt := time.Now().Local()
-	u.UpdateAt = &updateAt
+	u.IsMenu = nil
+	tt := time.Now().Local()
+	u.UpdateAt = &tt
 	updater := bson.M{"$set": &u}
 	if u.PID == nil {
 		updater["$unset"] = bson.M{"pID": ""}
@@ -139,12 +157,13 @@ func (app *App) PermUpdate(w http.ResponseWriter, r *http.Request, ps httprouter
 		return
 	}
 
-	responser.RetOk(w, "操作成功")
+	responser.RetOk(w, u.ID)
 }
 
 // PermList 查找权限
 func (app *App) PermList(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	p := struct {
+		IsMenu  *bool   `query:"isMenu,omitempty" validate:"omitempty"`
 		Keyword *string `query:"keyword,omitempty" validate:"omitempty"`
 		Skip    *int64  `query:"skip,omitempty" validate:"omitempty,min=0"`
 		Limit   *int64  `query:"limit,omitempty" validate:"omitempty,min=0"`
@@ -165,12 +184,14 @@ func (app *App) PermList(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	params := bson.M{}
 
 	if p.Keyword != nil {
-		params = bson.M{
-			"$or": []bson.M{
-				{"name": bson.M{"$regex": p.Keyword}},
-				{"_id": bson.M{"$regex": p.Keyword}},
-			},
+		params["$or"] = []bson.M{
+			{"name": bson.M{"$regex": p.Keyword}},
+			{"_id": bson.M{"$regex": p.Keyword}},
 		}
+	}
+
+	if p.IsMenu != nil {
+		params["isMenu"] = p.IsMenu
 	}
 
 	opt := options.Find()
@@ -201,7 +222,7 @@ func (app *App) PermList(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		return
 	}
 
-	total, err := t.CountDocuments(context.Background(), params)
+	total, err := t.CountDocuments(context.Background(), &params)
 
 	if err != nil {
 		responser.RetFail(w, err)
@@ -229,7 +250,7 @@ func (app *App) PermValidateKey(w http.ResponseWriter, r *http.Request, ps httpr
 		return
 	}
 
-	total, err := app.mongoClient.GetColl(model.TPerm).CountDocuments(context.Background(), bson.M{"_id": p.ID})
+	total, err := app.mongoClient.GetColl(model.TPerm).CountDocuments(context.Background(), bson.M{"_id": *p.ID})
 
 	if err != nil {
 		responser.RetFail(w, err)

@@ -99,6 +99,7 @@ func (d *MongoClient) Open(mg, mdb string, initdb bool) error {
 			{Keys: bsonx.Doc{bsonx.Elem{Key: "name", Value: bsonx.Int32(1)}}},
 			{Keys: bsonx.Doc{bsonx.Elem{Key: "pID", Value: bsonx.Int32(1)}}},
 			{Keys: bsonx.Doc{bsonx.Elem{Key: "url", Value: bsonx.Int32(1)}}},
+			{Keys: bsonx.Doc{bsonx.Elem{Key: "isMenu", Value: bsonx.Int32(1)}}},
 		})
 
 		if err != nil {
