@@ -33,9 +33,9 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 	}
 
 	type user struct {
-		ID    *primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty" `                         // id
-		Pwd   *string             `json:"pwd,omitempty" bson:"pwd,omitempty" validate:"required"`     // 账号
-		Email *string             `json:"email,omitempty" bson:"email,omitempty" validate:"required"` // 密码
+		ID    *primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty" `                               // id
+		Pwd   *string             `json:"pwd,omitempty" bson:"pwd,omitempty" validate:"required"`           // 账号
+		Email *string             `json:"email,omitempty" bson:"email,omitempty" validate:"email,required"` // 密码
 	}
 
 	inputUser := new(user)
@@ -111,6 +111,8 @@ func (app *App) Regsiter(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		responser.RetFail(w, err)
 		return
 	}
+
+	u.Roles = []string{"user"}
 
 	res, err := app.insertOneUser(&u)
 	if err != nil {
@@ -241,15 +243,16 @@ func (app *App) UpdateUser(w http.ResponseWriter, r *http.Request, ps httprouter
 		u.Pwd = &pwd
 	}
 
-	if u.Email != nil {
-		email := strings.ToLower(strings.Replace(*u.Email, " ", "", -1))
+	u.Email = nil
+	updater := bson.M{"$set": &u}
 
-		u.Email = &email
-	}
 	updateAt := time.Now().Local()
 	u.UpdateAt = &updateAt
+	if u.Roles == nil || len(u.Roles) == 0 {
+		updater["$unset"] = bson.M{"roles": ""}
+	}
 
-	res := app.mongoClient.GetColl(model.TUser).FindOneAndUpdate(context.Background(), bson.M{"_id": *u.ID}, bson.M{"$set": &u})
+	res := app.mongoClient.GetColl(model.TUser).FindOneAndUpdate(context.Background(), bson.M{"_id": *u.ID}, updater)
 
 	if res.Err() != nil {
 		errMsg := res.Err().Error()
@@ -284,11 +287,13 @@ func (app *App) UserList(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		return
 	}
 
-	params := bson.M{
-		"$or": []bson.M{
+	params := bson.M{}
+
+	if p.Keyword != nil {
+		params["$or"] = []bson.M{
 			{"name": bson.M{"$regex": p.Keyword}},
 			{"email": bson.M{"$regex": p.Keyword}},
-		},
+		}
 	}
 
 	opt := options.Find().
@@ -365,4 +370,37 @@ func (app *App) insertOneUser(u *model.User) (*mongo.InsertOneResult, error) {
 
 	}
 	return res, nil
+}
+
+// UserValidateEmail email 校验
+func (app *App) UserValidateEmail(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	p := struct {
+		Email *string `query:"email,omitempty" validate:"omitempty,email,required"`
+	}{}
+
+	err := urlquery.Unmarshal([]byte(r.URL.RawQuery), &p)
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	err = app.validate.Struct(&p)
+	if err != nil {
+		responser.RetFailWithTrans(w, err, app.trans)
+		return
+	}
+
+	total, err := app.mongoClient.GetColl(model.TUser).CountDocuments(context.Background(), bson.M{"email": &p.Email})
+
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	if total != 0 {
+		responser.RetFail(w, errors.New("该邮箱已经被注册"))
+		return
+	}
+
+	responser.RetOk(w, "validate key")
 }

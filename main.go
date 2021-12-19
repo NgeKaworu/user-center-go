@@ -61,6 +61,7 @@ func main() {
 	router.DELETE("/user/remove/:uid", app.RemoveUser)
 	router.PUT("/user/update", app.UpdateUser)
 	router.GET("/user/list", app.UserList)
+	router.GET("/user/validate", app.UserValidateEmail)
 
 	// role mgt
 	router.POST("/role/create", app.RoleCreate)

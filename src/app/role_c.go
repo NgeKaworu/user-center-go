@@ -125,6 +125,10 @@ func (app *App) RoleUpdate(w http.ResponseWriter, r *http.Request, ps httprouter
 	u.UpdateAt = &updateAt
 	updater := bson.M{"$set": &u}
 
+	if u.Perms == nil {
+		updater["$unset"] = bson.M{"perms": ""}
+	}
+
 	res := app.mongoClient.GetColl(model.TRole).FindOneAndUpdate(context.Background(), bson.M{"_id": *u.ID}, updater)
 
 	if res.Err() != nil {
