@@ -14,6 +14,7 @@ import (
 	"github.com/hetiansu5/urlquery"
 	"github.com/julienschmidt/httprouter"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
@@ -263,4 +264,53 @@ func (app *App) PermValidateKey(w http.ResponseWriter, r *http.Request, ps httpr
 	}
 
 	responser.RetOk(w, "validate key")
+}
+
+// Menu 查菜单
+func (app *App) Menu(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	uid, err := primitive.ObjectIDFromHex(r.Header.Get("uid"))
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	cur, err := app.mongoClient.GetColl(model.TUser).Aggregate(context.Background(), []bson.M{
+		{
+			"$match": bson.M{
+				"_id": uid,
+			},
+		},
+		{
+			"$lookup": bson.M{
+				"from":         "t_role",
+				"localField":   "roles",
+				"foreignField": "_id",
+				"as":           "roles",
+			},
+		},
+		{
+			"$lookup": bson.M{
+				"from":         "t_perm",
+				"localField":   "roles.perms",
+				"foreignField": "_id",
+				"as":           "perms",
+			},
+		},
+		{"$unwind": "$perms"},
+		{"$replaceRoot": bson.M{"newRoot": "$perms"}},
+	})
+
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	res := make([]model.Perm, 0)
+
+	if err = cur.All(context.Background(), &res); err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	responser.RetOk(w, res)
 }

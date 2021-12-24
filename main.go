@@ -82,6 +82,7 @@ func main() {
 	router.PUT("/perm/update", app.JWT(app.PermUpdate))
 	router.GET("/perm/list", app.JWT(app.PermList))
 	router.GET("/perm/validate", app.JWT(app.PermValidateKey))
+	router.GET("/menu", app.JWT(app.Menu))
 
 	// rpc
 	router.HEAD("/check-perm-rpc/:perm", app.JWT(app.CheckPermRPC))
