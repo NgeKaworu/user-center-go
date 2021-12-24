@@ -11,6 +11,7 @@ import (
 
 	"github.com/NgeKaworu/user-center/src/model"
 	"github.com/NgeKaworu/user-center/src/util/responser"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/hetiansu5/urlquery"
 	"github.com/julienschmidt/httprouter"
 	"go.mongodb.org/mongo-driver/bson"
@@ -81,14 +82,7 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 		return
 	}
 
-	tk, err := app.auth.GenJWT(outputUser.ID.Hex())
-
-	if err != nil {
-		responser.RetFail(w, err)
-		return
-	}
-
-	responser.RetOk(w, tk)
+	app.cacheSign(w, outputUser.ID.Hex())
 }
 
 // Regsiter 注册
@@ -120,14 +114,33 @@ func (app *App) Regsiter(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		return
 	}
 
-	tk, err := app.auth.GenJWT(res.InsertedID.(primitive.ObjectID).Hex())
+	app.cacheSign(w, res.InsertedID.(primitive.ObjectID).Hex())
+
+}
+
+func (app *App) cacheSign(w http.ResponseWriter, uid string) {
+	dur := time.Hour * 24 * 15
+	exp := time.Now().Add(dur).Unix()
+	tk, err := app.auth.GenJWT(&jwt.StandardClaims{
+		ExpiresAt: exp,
+		Issuer:    "fuRan",
+		Audience:  uid,
+	})
+
 	if err != nil {
 		responser.RetFail(w, err)
 		return
 	}
 
-	responser.RetOk(w, tk)
+	sign := strings.Split(tk, ".")[2]
+	cmd := app.rdb.SetEX(context.Background(), sign, uid, dur)
 
+	if cmd.Err() != nil {
+		responser.RetFail(w, cmd.Err())
+		return
+	}
+
+	responser.RetOk(w, sign)
 }
 
 // Profile 获取用户档案
