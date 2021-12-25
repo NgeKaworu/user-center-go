@@ -15,6 +15,7 @@ type Perm struct {
 	Name     *string    `json:"name,omitempty" bson:"name,omitempty" validate:"required"` // 权限名
 	CreateAt *time.Time `json:"createAt,omitempty" bson:"createAt,omitempty"`             // 创建时间
 	UpdateAt *time.Time `json:"updateAt,omitempty" bson:"updateAt,omitempty"`             // 更新时间
+	Order    *int       `json:"order,omitempty" bson:"order,omitempty"`                   // 排序
 
 	// menu
 	IsMenu     *bool   `json:"isMenu,omitempty" bson:"isMenu,omitempty" validate:"required"`          // 是否菜单

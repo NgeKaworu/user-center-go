@@ -67,7 +67,7 @@ func main() {
 	router.DELETE("/user/remove/:uid", app.JWT(app.RemoveUser))
 	router.PUT("/user/update", app.JWT(app.UpdateUser))
 	router.GET("/user/list", app.JWT(app.UserList))
-	router.GET("/user/validate", app.JWT(app.UserValidateEmail))
+	router.GET("/user/validate", app.UserValidateEmail)
 
 	// role mgt
 	router.POST("/role/create", app.JWT(app.RoleCreate))
