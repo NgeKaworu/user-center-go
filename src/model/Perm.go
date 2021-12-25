@@ -17,8 +17,9 @@ type Perm struct {
 	UpdateAt *time.Time `json:"updateAt,omitempty" bson:"updateAt,omitempty"`             // 更新时间
 
 	// menu
-	IsMenu *bool   `json:"isMenu,omitempty" bson:"isMenu,omitempty" validate:"required"`          // 是否菜单
-	IsHide *bool   `json:"isHide,omitempty" bson:"isHide,omitempty"`                              // 是否不在菜单中显视
-	PID    *string `json:"pID,omitempty" bson:"pID,omitempty"`                                    // 父级id
-	Url    *string `json:"url,omitempty" bson:"url,omitempty" validate:"required_if=IsMenu true"` // url
+	IsMenu     *bool   `json:"isMenu,omitempty" bson:"isMenu,omitempty" validate:"required"`          // 是否菜单
+	IsHide     *bool   `json:"isHide,omitempty" bson:"isHide,omitempty"`                              // 是否不在菜单中显视
+	IsMicroApp *bool   `json:"isMicroApp,omitempty" bson:"isMicroApp,omitempty"`                      // 是否微应用入口
+	PID        *string `json:"pID,omitempty" bson:"pID,omitempty"`                                    // 父级id
+	Url        *string `json:"url,omitempty" bson:"url,omitempty" validate:"required_if=IsMenu true"` // url
 }
