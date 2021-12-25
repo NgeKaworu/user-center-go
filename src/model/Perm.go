@@ -22,4 +22,5 @@ type Perm struct {
 	IsMicroApp *bool   `json:"isMicroApp,omitempty" bson:"isMicroApp,omitempty"`                      // 是否微应用入口
 	PID        *string `json:"pID,omitempty" bson:"pID,omitempty"`                                    // 父级id
 	Url        *string `json:"url,omitempty" bson:"url,omitempty" validate:"required_if=IsMenu true"` // url
+	Icon       *string `json:"icon,omitempty" bson:"icon,omitempty" `                                 // icon
 }

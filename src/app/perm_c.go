@@ -314,3 +314,28 @@ func (app *App) Menu(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 
 	responser.RetOk(w, res)
 }
+
+// MicroApp 查子系统
+func (app *App) MicroApp(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	cur, err := app.mongoClient.GetColl(model.TPerm).Find(context.Background(), bson.M{
+		"isMicroApp": true,
+	})
+
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	res := make([]struct {
+		ID  *string `json:"name,omitempty" bson:"_id,omitempty"`  // id
+		Url *string `json:"entry,omitempty" bson:"url,omitempty"` // url
+	}, 0)
+
+	err = cur.All(context.Background(), &res)
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	responser.RetOk(w, res)
+}

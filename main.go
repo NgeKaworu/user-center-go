@@ -83,6 +83,7 @@ func main() {
 	router.GET("/perm/list", app.JWT(app.PermList))
 	router.GET("/perm/validate", app.JWT(app.PermValidateKey))
 	router.GET("/menu", app.JWT(app.Menu))
+	router.GET("/micro-app", app.MicroApp)
 
 	// rpc
 	router.HEAD("/check-perm-rpc/:perm", app.JWT(app.CheckPermRPC))
@@ -111,6 +112,7 @@ func main() {
 			}()
 			<-cleanup
 			mongoClient.Close()
+			rdb.Close()
 			fmt.Println("safe exit")
 			cleanupDone <- true
 
