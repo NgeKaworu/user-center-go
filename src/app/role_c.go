@@ -76,6 +76,14 @@ func (app *App) RoleRemove(w http.ResponseWriter, r *http.Request, ps httprouter
 		responser.RetFail(w, errors.New("ID不能为空"))
 		return
 	}
+	c, err := app.mongoClient.GetColl(model.TUser).CountDocuments(context.Background(), bson.M{
+		"roles": id,
+	})
+
+	if err != nil || c > 0 {
+		responser.RetFail(w, errors.New("无法删除使用中角色"))
+		return
+	}
 
 	res := app.mongoClient.GetColl(model.TRole).FindOneAndDelete(context.Background(), bson.M{
 		"_id": id,

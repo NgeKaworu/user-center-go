@@ -79,9 +79,18 @@ func (app *App) PermRemove(w http.ResponseWriter, r *http.Request, ps httprouter
 		return
 	}
 
+	c, err := app.mongoClient.GetColl(model.TRole).CountDocuments(context.Background(), bson.M{
+		"perms": id,
+	})
+
+	if err != nil || c > 0 {
+		responser.RetFail(w, errors.New("无法删除使用中权限"))
+		return
+	}
+
 	t := app.mongoClient.GetColl(model.TPerm)
 
-	c, err := t.CountDocuments(context.Background(), bson.M{
+	c, err = t.CountDocuments(context.Background(), bson.M{
 		"pID": id,
 	})
 
