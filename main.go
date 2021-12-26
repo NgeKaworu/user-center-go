@@ -61,27 +61,27 @@ func main() {
 	// user ctrl
 	router.POST("/login", app.Login)
 	router.POST("/register", app.Regsiter)
-	router.GET("/profile", app.JWT(app.CheckPerm("profile")(app.Profile)))
+	router.GET("/profile", app.JWT(app.Profile))
 	// user mgt
-	router.POST("/user/create", app.JWT(app.CreateUser))
-	router.DELETE("/user/remove/:uid", app.JWT(app.RemoveUser))
-	router.PUT("/user/update", app.JWT(app.UpdateUser))
-	router.GET("/user/list", app.JWT(app.UserList))
+	router.POST("/user/create", app.JWT(app.CheckPerm("admiin")(app.CreateUser)))
+	router.DELETE("/user/remove/:uid", app.JWT(app.CheckPerm("admiin")(app.RemoveUser)))
+	router.PUT("/user/update", app.JWT(app.CheckPerm("admiin")(app.UpdateUser)))
+	router.GET("/user/list", app.JWT(app.CheckPerm("admiin")(app.UserList)))
 	router.GET("/user/validate", app.UserValidateEmail)
 
 	// role mgt
-	router.POST("/role/create", app.JWT(app.RoleCreate))
-	router.DELETE("/role/remove/:id", app.JWT(app.RoleRemove))
-	router.PUT("/role/update", app.JWT(app.RoleUpdate))
-	router.GET("/role/list", app.JWT(app.RoleList))
-	router.GET("/role/validate", app.JWT(app.RoleValidateKey))
+	router.POST("/role/create", app.JWT(app.CheckPerm("admiin")(app.RoleCreate)))
+	router.DELETE("/role/remove/:id", app.JWT(app.CheckPerm("admiin")(app.RoleRemove)))
+	router.PUT("/role/update", app.JWT(app.CheckPerm("admiin")(app.RoleUpdate)))
+	router.GET("/role/list", app.JWT(app.CheckPerm("admiin")(app.RoleList)))
+	router.GET("/role/validate", app.JWT(app.CheckPerm("admiin")(app.RoleValidateKey)))
 
 	// perm mgt
-	router.POST("/perm/create", app.JWT(app.PermCreate))
-	router.DELETE("/perm/remove/:id", app.JWT(app.PermRemove))
-	router.PUT("/perm/update", app.JWT(app.PermUpdate))
-	router.GET("/perm/list", app.JWT(app.PermList))
-	router.GET("/perm/validate", app.JWT(app.PermValidateKey))
+	router.POST("/perm/create", app.JWT(app.CheckPerm("admiin")(app.PermCreate)))
+	router.DELETE("/perm/remove/:id", app.JWT(app.CheckPerm("admiin")(app.PermRemove)))
+	router.PUT("/perm/update", app.JWT(app.CheckPerm("admiin")(app.PermUpdate)))
+	router.GET("/perm/list", app.JWT(app.CheckPerm("admiin")(app.PermList)))
+	router.GET("/perm/validate", app.JWT(app.CheckPerm("admiin")(app.PermValidateKey)))
 	router.GET("/menu", app.JWT(app.Menu))
 	router.GET("/micro-app", app.MicroApp)
 
