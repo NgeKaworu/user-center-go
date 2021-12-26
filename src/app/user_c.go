@@ -82,7 +82,15 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 		return
 	}
 
-	app.cacheSign(w, outputUser.ID.Hex())
+	uid := outputUser.ID.Hex()
+
+	_, err = app.rdb.Del(context.Background(), uid+":perm").Result()
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	app.cacheSign(w, uid)
 }
 
 // Regsiter 注册

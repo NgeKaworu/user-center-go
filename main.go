@@ -28,7 +28,7 @@ func init() {
 
 func main() {
 	var (
-		addr   = flag.String("l", ":8088", "绑定Host地址")
+		addr   = flag.String("l", ":8020", "绑定Host地址")
 		dbInit = flag.Bool("i", true, "init database flag")
 		m      = flag.String("m", "mongodb://localhost:27017", "mongod addr flag")
 		db     = flag.String("db", "uc", "database name")
