@@ -33,6 +33,7 @@ func main() {
 		m      = flag.String("m", "mongodb://localhost:27017", "mongod addr flag")
 		db     = flag.String("db", "uc", "database name")
 		k      = flag.String("k", "f3fa39nui89Wi707", "iv key")
+		r      = flag.String("r", "localhost:6379", "rdb addr")
 	)
 	flag.Parse()
 
@@ -46,7 +47,7 @@ func main() {
 	}
 
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "redis:6379",
+		Addr:     *r,
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})

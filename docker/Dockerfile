@@ -19,4 +19,4 @@ WORKDIR /home/go/app
 
 COPY --from=builder /home/go/app/bin /home/go/app
 
-CMD ["sh", "-c", "./app -l=$ADDR -i=$DBINIT -m=$MONGO -db=$DB -k=$K"]
+CMD ["sh", "-c", "./app -l=$ADDR -i=$DBINIT -m=$MONGO -db=$DB -k=$K -r=$REDIS"]
