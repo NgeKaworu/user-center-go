@@ -74,15 +74,15 @@ func main() {
 	router.POST("/role/create", app.JWT(app.CheckPerm("admin")(app.RoleCreate)))
 	router.DELETE("/role/remove/:id", app.JWT(app.CheckPerm("admin")(app.RoleRemove)))
 	router.PUT("/role/update", app.JWT(app.CheckPerm("admin")(app.RoleUpdate)))
-	router.GET("/role/list", app.JWT(app.CheckPerm("admin")(app.RoleList)))
-	router.GET("/role/validate", app.JWT(app.CheckPerm("admin")(app.RoleValidateKey)))
+	router.GET("/role/list", app.JWT(app.RoleList))
+	router.GET("/role/validate", app.JWT(app.RoleValidateKey))
 
 	// perm mgt
 	router.POST("/perm/create", app.JWT(app.CheckPerm("admin")(app.PermCreate)))
 	router.DELETE("/perm/remove/:id", app.JWT(app.CheckPerm("admin")(app.PermRemove)))
 	router.PUT("/perm/update", app.JWT(app.CheckPerm("admin")(app.PermUpdate)))
-	router.GET("/perm/list", app.JWT(app.CheckPerm("admin")(app.PermList)))
-	router.GET("/perm/validate", app.JWT(app.CheckPerm("admin")(app.PermValidateKey)))
+	router.GET("/perm/list", app.JWT(app.PermList))
+	router.GET("/perm/validate", app.JWT(app.PermValidateKey))
 	router.GET("/menu", app.JWT(app.Menu))
 	router.GET("/micro-app", app.MicroApp)
 
