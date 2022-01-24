@@ -89,6 +89,9 @@ func main() {
 	// rpc
 	router.HEAD("/check-perm-rpc/:perm", app.JWT(app.CheckPermRPC))
 
+	// cookie
+	router.GET("/cookie", app.Cookie)
+
 	srv := &http.Server{Handler: cors.CORS(router), ErrorLog: nil}
 	srv.Addr = *addr
 

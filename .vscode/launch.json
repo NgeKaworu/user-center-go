@@ -11,12 +11,12 @@
       "mode": "auto",
       "program": "${workspaceFolder}/main.go",
       "args": [
-        "-i=${env:DBINIT}",
-        "-l=${env:ADDR}",
-        "-m=${env:MONGO}",
-        "-db=${env:DB}",
-        "-k=${env:K}",
-        "-r=${env:REDIS}",
+        // "-i=${env:DBINIT}",
+        // "-l=${env:ADDR}",
+        // "-m=${env:MONGO}",
+        // "-db=${env:DB}",
+        // "-k=${env:K}",
+        // "-r=${env:REDIS}",
       ],
       "debugAdapter":"legacy"
     }

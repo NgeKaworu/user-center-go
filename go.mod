@@ -23,6 +23,7 @@ require (
 	github.com/go-playground/validator/v10 v10.9.0
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
+	github.com/google/uuid v1.3.0
 	github.com/hetiansu5/urlquery v1.2.7
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
