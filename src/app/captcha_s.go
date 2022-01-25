@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	CAPTCHA_MAX_AGE = 60 * 10 // seconds
+	MAX_AGE         = 60           // seconds
+	CAPTCHA_MAX_AGE = MAX_AGE * 10 // seconds
 	CAPTCHA_KEY     = "session"
 )
 
@@ -42,19 +43,6 @@ func (app *App) getCacheCaptcha(key *string) (string, error) {
 
 }
 
-func (app *App) getRedisLocked(email *string) (bool, error) {
-	exists := app.rdb.Exists(context.Background(), "test")
-	if exists.Err() != nil {
-		return true, exists.Err()
-	}
-
-	if exists.Val() == 1 {
-		return true, nil
-	}
-
-	return false, nil
-}
-
 func (app *App) setRedisCaptcha(email, captcha *string) error {
 
 	cmd := app.rdb.Set(context.Background(), *email, *captcha, time.Duration(CAPTCHA_MAX_AGE)*time.Second)
@@ -62,6 +50,14 @@ func (app *App) setRedisCaptcha(email, captcha *string) error {
 		return cmd.Err()
 	}
 
+	return nil
+}
+
+func (app *App) removeRedisCaptcha(email *string) error {
+	cmd := app.rdb.Del(context.Background(), *email)
+	if cmd.Err() != nil {
+		return cmd.Err()
+	}
 	return nil
 }
 
@@ -73,7 +69,8 @@ func (app *App) getSetSessionLocked(w http.ResponseWriter, r *http.Request) bool
 			Name:     CAPTCHA_KEY,
 			Value:    uuid.NewString(),
 			HttpOnly: true,
-			MaxAge:   600,
+			MaxAge:   MAX_AGE,
+			Path:     "/",
 		}
 		w.Header().Set("Set-Cookie", c.String())
 
@@ -85,11 +82,6 @@ func (app *App) getSetSessionLocked(w http.ResponseWriter, r *http.Request) bool
 }
 
 func (app *App) checkCaptcha(w http.ResponseWriter, r *http.Request, capcha *model.Captcha) error {
-
-	if !app.getSetSessionLocked(w, r) {
-		return errors.New("验证码已过期, code: 001")
-	}
-
 	err := app.validate.Struct(capcha)
 
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -129,6 +130,12 @@ func (app *App) Regsiter(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		return
 	}
 
+	err = app.removeRedisCaptcha(u.Email)
+
+	if err != nil {
+		log.Println(err)
+	}
+
 	app.cacheSign(w, res.InsertedID.(primitive.ObjectID).Hex())
 
 }
@@ -146,14 +153,26 @@ func (app *App) ForgetPwd(w http.ResponseWriter, r *http.Request, ps httprouter.
 		responser.RetFail(w, errors.New("not has body"))
 	}
 
-	var u model.User
+	var u struct {
+		ID       *primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`                                // id
+		Pwd      *string             `json:"pwd,omitempty" bson:"pwd,omitempty" validate:"required,min=8"`     // 密码
+		Email    *string             `json:"email,omitempty" bson:"email,omitempty" validate:"required,email"` // 邮箱
+		Captcha  *string             `json:"captcha,omitempty" bson:"-"`                                       // 验证码
+		UpdateAt *time.Time          `json:"updateAt,omitempty" bson:"updateAt,omitempty"`                     // 更新时间
+	}
+
 	err = json.Unmarshal(body, &u)
 	if err != nil {
 		responser.RetFail(w, err)
 		return
 	}
 
-	err = app.checkCaptcha(w, r, u.ToCaptcha())
+	capcha := model.Captcha{
+		Email:   u.Email,
+		Captcha: u.Captcha,
+	}
+
+	err = app.checkCaptcha(w, r, &capcha)
 	if err != nil {
 		responser.RetFail(w, err)
 		return
@@ -180,10 +199,6 @@ func (app *App) ForgetPwd(w http.ResponseWriter, r *http.Request, ps httprouter.
 	updateAt := time.Now().Local()
 	u.UpdateAt = &updateAt
 
-	if u.Roles == nil || len(u.Roles) == 0 {
-		updater["$unset"] = bson.M{"roles": ""}
-	}
-
 	res := app.mongoClient.GetColl(model.TUser).FindOneAndUpdate(context.Background(), bson.M{"email": email}, updater)
 
 	if res.Err() != nil {
@@ -193,7 +208,14 @@ func (app *App) ForgetPwd(w http.ResponseWriter, r *http.Request, ps httprouter.
 
 	res.Decode(&u)
 
+	err = app.removeRedisCaptcha(&email)
+
+	if err != nil {
+		log.Println(err)
+	}
+
 	app.cacheSign(w, u.ID.Hex())
+
 }
 
 func (app *App) cacheSign(w http.ResponseWriter, uid string) {

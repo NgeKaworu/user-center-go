@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -14,8 +15,7 @@ import (
 func (app *App) FetchCaptcha(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	if app.getSetSessionLocked(w, r) {
-		w.WriteHeader(http.StatusNotModified)
-		responser.RetOk(w, "验证码已经发送")
+		responser.RetFail(w, errors.New("请求频繁，请60s后再试"))
 		return
 	}
 
@@ -35,22 +35,10 @@ func (app *App) FetchCaptcha(w http.ResponseWriter, r *http.Request, ps httprout
 		return
 	}
 
-	lock, err := app.getRedisLocked(p.Email)
-	if err != nil {
-		responser.RetFail(w, err)
-		return
-	}
-
-	if lock {
-		w.WriteHeader(http.StatusNotModified)
-		responser.RetOk(w, "验证码已经发送")
-		return
-	}
-
 	captcha := padStartZero(rand.Intn(10000))
 	app.setRedisCaptcha(p.Email, &captcha)
 
-	w.Header().Set("Cache-Control", "max-age="+strconv.FormatInt(int64(CAPTCHA_MAX_AGE), 10))
+	w.Header().Set("Cache-Control", "max-age="+strconv.FormatInt(int64(MAX_AGE), 10))
 	go app.sendCaptcha(p.Email, &captcha)
 
 	responser.RetOk(w, "验证码已经发送")
@@ -70,7 +58,7 @@ func (app *App) CheckCaptcha(w http.ResponseWriter, r *http.Request, ps httprout
 	err = app.checkCaptcha(w, r, &p)
 
 	if err != nil {
-		responser.RetFail(w, err)
+		responser.RetFail(w, errors.New("验证失败"))
 		return
 	}
 
