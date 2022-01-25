@@ -191,7 +191,9 @@ func (app *App) ForgetPwd(w http.ResponseWriter, r *http.Request, ps httprouter.
 		return
 	}
 
-	responser.RetOk(w, "操作成功")
+	res.Decode(&u)
+
+	app.cacheSign(w, u.ID.Hex())
 }
 
 func (app *App) cacheSign(w http.ResponseWriter, uid string) {
