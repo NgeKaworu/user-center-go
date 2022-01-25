@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,6 +19,7 @@ import (
 	"github.com/NgeKaworu/user-center/src/service/auth"
 	"github.com/NgeKaworu/user-center/src/util/validator"
 	"github.com/go-redis/redis/v8"
+	"gopkg.in/gomail.v2"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -34,6 +36,7 @@ func main() {
 		db     = flag.String("db", "uc", "database name")
 		k      = flag.String("k", "f3fa39nui89Wi707", "iv key")
 		r      = flag.String("r", "localhost:6379", "rdb addr")
+		ePwd   = flag.String("d", "", "email pwd")
 	)
 	flag.Parse()
 
@@ -55,8 +58,11 @@ func main() {
 	validate := validator.NewValidator()
 	trans := validator.NewValidatorTranslator(validate)
 
+	rand.Seed(time.Now().Unix())
+	d := gomail.NewDialer("smtp.gmail.com", 587, "ngekaworu@gmail.com", *ePwd)
+
 	auth := auth.New(*k)
-	app := app.New(mongoClient, rdb, validate, trans, auth)
+	app := app.New(mongoClient, rdb, validate, trans, auth, d)
 
 	router := httprouter.New()
 	// user ctrl
@@ -89,8 +95,9 @@ func main() {
 	// rpc
 	router.HEAD("/check-perm-rpc/:perm", app.JWT(app.CheckPermRPC))
 
-	// cookie
-	router.GET("/cookie", app.Cookie)
+	// captcha
+	router.GET("/captcha/fetch", app.FetchCaptcha)
+	router.GET("/captcha/check", app.CheckCaptcha)
 
 	srv := &http.Server{Handler: cors.CORS(router), ErrorLog: nil}
 	srv.Addr = *addr

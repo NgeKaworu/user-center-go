@@ -6,6 +6,7 @@ import (
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	"github.com/go-redis/redis/v8"
+	"gopkg.in/gomail.v2"
 )
 
 type App struct {
@@ -14,6 +15,7 @@ type App struct {
 	validate    *validator.Validate
 	trans       *ut.Translator
 	auth        *auth.Auth
+	d           *gomail.Dialer
 }
 
 func New(
@@ -22,6 +24,7 @@ func New(
 	validate *validator.Validate,
 	trans *ut.Translator,
 	auth *auth.Auth,
+	d *gomail.Dialer,
 ) *App {
 	return &App{
 		mongoClient,
@@ -29,5 +32,6 @@ func New(
 		validate,
 		trans,
 		auth,
+		d,
 	}
 }

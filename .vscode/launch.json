@@ -17,6 +17,7 @@
         // "-db=${env:DB}",
         // "-k=${env:K}",
         // "-r=${env:REDIS}",
+        "-d=${env:D}",
       ],
       "debugAdapter":"legacy"
     }
