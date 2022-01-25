@@ -2,9 +2,12 @@ package app
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
+	"github.com/NgeKaworu/user-center/src/model"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"gopkg.in/gomail.v2"
 )
@@ -78,5 +81,36 @@ func (app *App) getSetSessionLocked(w http.ResponseWriter, r *http.Request) bool
 	}
 
 	return true
+
+}
+
+func (app *App) checkCaptcha(w http.ResponseWriter, r *http.Request, capcha *model.Captcha) error {
+
+	if !app.getSetSessionLocked(w, r) {
+		return errors.New("验证码已过期, code: 001")
+	}
+
+	err := app.validate.Struct(capcha)
+
+	if err != nil {
+		var errMsg string
+		for _, v := range err.(validator.ValidationErrors).Translate(*app.trans) {
+			errMsg += v + ","
+		}
+		return errors.New(errMsg)
+	}
+
+	captcha, err := app.getCacheCaptcha(capcha.Email)
+
+	if err != nil {
+		return err
+
+	}
+
+	if captcha != *capcha.Captcha {
+		return errors.New("验证码错误")
+	}
+
+	return nil
 
 }

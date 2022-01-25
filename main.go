@@ -68,7 +68,9 @@ func main() {
 	// user ctrl
 	router.POST("/login", app.Login)
 	router.POST("/register", app.Regsiter)
+	router.POST("/forget-pwd", app.ForgetPwd)
 	router.GET("/profile", app.JWT(app.Profile))
+
 	// user mgt
 	router.POST("/user/create", app.JWT(app.CheckPerm("admin")(app.CreateUser)))
 	router.DELETE("/user/remove/:uid", app.JWT(app.CheckPerm("admin")(app.RemoveUser)))

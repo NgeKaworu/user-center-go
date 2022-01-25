@@ -1,12 +1,11 @@
 package app
 
 import (
-	"errors"
-	"log"
 	"math/rand"
 	"net/http"
 	"strconv"
 
+	"github.com/NgeKaworu/user-center/src/model"
 	"github.com/NgeKaworu/user-center/src/util/responser"
 	"github.com/hetiansu5/urlquery"
 	"github.com/julienschmidt/httprouter"
@@ -60,15 +59,7 @@ func (app *App) FetchCaptcha(w http.ResponseWriter, r *http.Request, ps httprout
 
 func (app *App) CheckCaptcha(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
-	if !app.getSetSessionLocked(w, r) {
-		responser.RetFail(w, errors.New("验证码已过期, code: 001"))
-		return
-	}
-
-	p := struct {
-		Captcha *string `query:"captcha,omitempty" validate:"required"`
-		Email   *string `query:"email,omitempty" validate:"required,email"`
-	}{}
+	var p model.Captcha
 
 	err := urlquery.Unmarshal([]byte(r.URL.RawQuery), &p)
 	if err != nil {
@@ -76,22 +67,10 @@ func (app *App) CheckCaptcha(w http.ResponseWriter, r *http.Request, ps httprout
 		return
 	}
 
-	err = app.validate.Struct(&p)
-	if err != nil {
-		responser.RetFailWithTrans(w, err, app.trans)
-		return
-	}
-
-	captcha, err := app.getCacheCaptcha(p.Email)
+	err = app.checkCaptcha(w, r, &p)
 
 	if err != nil {
-		log.Println(err)
-		responser.RetFail(w, errors.New("验证码已过期, code: 002"))
-		return
-	}
-
-	if captcha != *p.Captcha {
-		responser.RetFail(w, errors.New("验证码错误"))
+		responser.RetFail(w, err)
 		return
 	}
 

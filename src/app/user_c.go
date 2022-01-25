@@ -114,6 +114,13 @@ func (app *App) Regsiter(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		return
 	}
 
+	err = app.checkCaptcha(w, r, u.ToCaptcha())
+
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
 	u.Roles = []string{"user"}
 
 	res, err := app.insertOneUser(&u)
@@ -124,6 +131,67 @@ func (app *App) Regsiter(w http.ResponseWriter, r *http.Request, ps httprouter.P
 
 	app.cacheSign(w, res.InsertedID.(primitive.ObjectID).Hex())
 
+}
+
+// ForgetPwd 忘记密码
+func (app *App) ForgetPwd(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+	body, err := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+	if len(body) == 0 {
+		responser.RetFail(w, errors.New("not has body"))
+	}
+
+	var u model.User
+	err = json.Unmarshal(body, &u)
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	err = app.checkCaptcha(w, r, u.ToCaptcha())
+	if err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	if err := app.validate.Struct(u); err != nil {
+		responser.RetFail(w, err)
+		return
+	}
+
+	enc, err := app.auth.CFBEncrypter(*u.Pwd)
+
+	if err != nil {
+		responser.RetFail(w, err)
+	}
+
+	pwd := string(enc)
+	u.Pwd = &pwd
+
+	email := *u.Email
+	u.Email = nil
+	updater := bson.M{"$set": &u}
+
+	updateAt := time.Now().Local()
+	u.UpdateAt = &updateAt
+
+	if u.Roles == nil || len(u.Roles) == 0 {
+		updater["$unset"] = bson.M{"roles": ""}
+	}
+
+	res := app.mongoClient.GetColl(model.TUser).FindOneAndUpdate(context.Background(), bson.M{"email": email}, updater)
+
+	if res.Err() != nil {
+		responser.RetFail(w, res.Err())
+		return
+	}
+
+	responser.RetOk(w, "操作成功")
 }
 
 func (app *App) cacheSign(w http.ResponseWriter, uid string) {
